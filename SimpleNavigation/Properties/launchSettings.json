@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "SimpleNavigation (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "SimpleNavigation (Unpackaged)": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}

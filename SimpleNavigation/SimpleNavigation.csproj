@@ -1,0 +1,175 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>SimpleNavigation</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win10-x86;win10-x64;win10-arm64</RuntimeIdentifiers>
+    <PublishProfile>win10-$(Platform).pubxml</PublishProfile>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0.0</Version>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- 
+      Only icon formatted images are allowed for this property. 
+    -->
+    <ApplicationIcon>Assets/Win10Logo.ico</ApplicationIcon>
+    <!-- 
+      WindowsPackageType defines whether your app is packaged (MSIX) or unpackaged (None) 
+    -->
+      <WindowsPackageType>None</WindowsPackageType>
+      <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+
+    <!-- ** Extras (https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props) ** -->
+
+    <!--
+    The RollForward property controls how the application chooses a runtime when multiple runtime versions 
+    are available. This value is output to the RepoBackup.runtimeconfig.json as the "rollForward" setting.
+    -->
+      <RollForward>LatestMinor</RollForward>
+
+    <!-- 
+    CopyLocalLockFileAssemblies is useful for plugin projects that have dependencies on other libraries.
+    If you set this property to true, any NuGet package dependencies are copied to the output directory.
+    -->
+      <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
+    <!--
+    Generates an XML documentation file at compile time, e.g. "(outdir)\ProjectNameHere.xml"
+    This will also check the formatting of your summary blocks and put the notes inside the documentation file.
+    -->
+      <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- 
+    These next two get rid of all the unecessary pathing that MS adds and 
+    makes the output match the traditional .NET Framework builds.
+    -->
+      <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+      <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+
+    <!-- 
+    Whether the SDK generates error NETSDK1148 when MSBuild detects duplicate 
+    files in the publish output, but can't determine which files to remove.
+    -->
+      <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+  </PropertyGroup>
+
+  <!-- 
+	 Define "IS_UNPACKAGED" constant if the app is an unpackaged app. 
+   -->
+  <PropertyGroup Condition="'$(WindowsPackageType)' == 'None'">
+      <DefineConstants>IS_UNPACKAGED</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\Background.png" />
+    <None Remove="Assets\gear1.png" />
+    <None Remove="Assets\gear2.png" />
+    <None Remove="Assets\Win10Logo.ico" />
+    <None Remove="Assets\Win10Logo.png" />
+    <None Remove="HomePage.xaml" />
+    <None Remove="ImagesPage.xaml" />
+    <None Remove="MainPage.xaml" />
+    <None Remove="NextPage.xaml" />
+    <None Remove="SettingsPage.xaml" />
+    <None Remove="TestPage.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+      <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.230822000" />
+      <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" />
+      <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <!-- 
+    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+    Tools extension to be activated for this project even if the Windows App SDK Nuget
+    package has not yet been restored.
+  -->
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="ImagesPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="HomePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="SettingsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="TestPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="NextPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="MainPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Pages\" />
+  </ItemGroup>
+
+  <!-- 
+    Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution 
+    Explorer "Package and Publish" context menu entry to be enabled for this project even if 
+    the Windows App SDK Nuget package has not yet been restored.
+  -->
+  <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+    <NoWarn>1701;1702;CS1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <NoWarn>1701;1702;CS1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <NoWarn>1701;1702;CS1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+    <NoWarn>1701;1702;CS1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <NoWarn>1701;1702;CS1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <NoWarn>1701;1702;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- 
+    This target will remove the language folders inside the build output except the specified one. 
+  -->
+    <Target Name="RemoveFoldersWithMuiFiles" AfterTargets="Build">
+        <ItemGroup>
+            <RemovingFiles Include="$(OutDir)*\*.mui" Exclude="$(OutDir)en-us\*.mui" />
+            <RemovingFolders Include="@(RemovingFiles->'%(RootDir)%(Directory)')" />
+        </ItemGroup>
+        <RemoveDir Directories="@(RemovingFolders)" />
+    </Target>
+</Project>

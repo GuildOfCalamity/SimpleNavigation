@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="SimpleNavigation.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:SimpleNavigation"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    NavigationCacheMode="Enabled"
+    mc:Ignorable="d">
+
+    <Grid Margin="10">
+        <StackPanel
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Orientation="Vertical"
+            Spacing="10">
+            <TextBlock
+                x:Name="landing"
+                HorizontalAlignment="Center"
+                FontSize="20" />
+            <TextBlock>
+                <Run
+                    FontSize="18"
+                    Foreground="DodgerBlue"
+                    Text="About…" />
+                <LineBreak />
+                <LineBreak />
+                <Run Foreground="WhiteSmoke" Text="This is a home-brew demo of how to make your own navigation app." />
+                <LineBreak />
+                <LineBreak />
+                <Run Foreground="WhiteSmoke" Text="Normally you would use the " />
+                <Run Foreground="Goldenrod" Text="NavigationView" />
+                <Run Foreground="WhiteSmoke" Text=" control, which could make life easier." />
+                <LineBreak />
+                <LineBreak />
+                <Run Foreground="WhiteSmoke" Text="But that control comes with it's own complexity and use-cases." />
+                <LineBreak />
+                <LineBreak />
+                <Run Foreground="WhiteSmoke" Text="However, the point of this app is to show alternative techniques." />
+                <LineBreak />
+                <LineBreak />
+                <Run Foreground="DodgerBlue" Text="© GuildOfCalamity — September 2023" />
+            </TextBlock>
+        </StackPanel>
+    </Grid>
+</Page>
