@@ -27,18 +27,21 @@
                     Text="About…" />
                 <LineBreak />
                 <LineBreak />
-                <Run Foreground="WhiteSmoke" Text="This is a home-brew demo of how to make your own navigation app." />
+                <Run Text="This is a home-brew demo of how to make your own navigation app." />
                 <LineBreak />
                 <LineBreak />
-                <Run Foreground="WhiteSmoke" Text="Normally you would use the " />
-                <Run Foreground="Goldenrod" Text="NavigationView" />
-                <Run Foreground="WhiteSmoke" Text=" control, which could make life easier." />
+                <Run Text="Normally you would use the " />
+                <Run
+                    FontWeight="Medium"
+                    Foreground="Goldenrod"
+                    Text="NavigationView" />
+                <Run Text=" control, which could make life easier." />
                 <LineBreak />
                 <LineBreak />
-                <Run Foreground="WhiteSmoke" Text="But that control comes with it's own complexity and use-cases." />
+                <Run Text="But that control comes with it's own complexity and use-cases." />
                 <LineBreak />
                 <LineBreak />
-                <Run Foreground="WhiteSmoke" Text="However, the point of this app is to show alternative techniques." />
+                <Run Text="However, the point of this app is to show alternative techniques." />
                 <LineBreak />
                 <LineBreak />
                 <Run Foreground="DodgerBlue" Text="© GuildOfCalamity — September 2023" />

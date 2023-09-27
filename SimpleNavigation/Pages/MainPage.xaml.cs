@@ -92,13 +92,13 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
 			rb.IsChecked = true;
 			RadioButton_Click(rb, new RoutedEventArgs());
-		}
+	}
 
-		void RadioButton_Click(object sender, RoutedEventArgs e)
+	void RadioButton_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            if (MainFrame.Content != null && MainFrame.Content is Page pg)
+			if (MainFrame.Content != null && MainFrame.Content is Page pg)
                Debug.WriteLine($"BaseUri is '{pg.BaseUri}'");
 
             pageTitle.Text = $"{((RadioButton)sender).Content}".Replace("Page","");

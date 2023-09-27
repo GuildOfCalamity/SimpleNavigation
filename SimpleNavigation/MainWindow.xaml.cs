@@ -26,7 +26,7 @@ namespace SimpleNavigation
             this.InitializeComponent();
             this.ExtendsContentIntoTitleBar = true;
             this.SetTitleBar(AppTitleBar);
-            this.Title = App.GetCurrentAssemblyName();
+            this.Title = AssemblyHelper.GetAssemblyName();
 
             #region [SystemBackdrop was added starting with WinAppSDK 1.3.230502+]
             if (Extensions.IsWindows11OrGreater())
