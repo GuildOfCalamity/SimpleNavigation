@@ -14,11 +14,184 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Windows.Storage;
+using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Graphics.Imaging;
+using Windows.Storage.Streams;
 
 namespace SimpleNavigation
 {
     public static class Extensions
     {
+        /// <summary>
+        /// Use this if you only have a root resource dictionary.
+        /// var rdBrush = Extensions.GetResource{SolidColorBrush}("PrimaryBrush");
+        /// </summary>
+        public static T? GetResource<T>(string resourceName) where T : class
+        {
+            try
+            {
+                if (Application.Current.Resources.TryGetValue($"{resourceName}", out object value))
+                    return (T)value;
+                else
+                    return default(T);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetResource: {ex.Message}", $"{nameof(Extensions)}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Use this if you have merged theme resource dictionaries.
+        /// var darkBrush = Extensions.GetThemeResource{SolidColorBrush}("PrimaryBrush", ElementTheme.Dark);
+        /// var lightBrush = Extensions.GetThemeResource{SolidColorBrush}("PrimaryBrush", ElementTheme.Light);
+        /// </summary>
+        public static T? GetThemeResource<T>(string resourceName, ElementTheme? theme) where T : class
+        {
+            try
+            {
+                theme ??= ElementTheme.Default;
+
+                var dictionaries = Application.Current.Resources.MergedDictionaries;
+                foreach (var item in dictionaries)
+                {
+                    // A typical IList<ResourceDictionary> will contain:
+                    //   - 'Default'
+                    //   - 'Light'
+                    //   - 'Dark'
+                    //   - 'HighContrast'
+                    foreach (var kv in item.ThemeDictionaries.Keys)
+                    {
+                        Debug.WriteLine($"ThemeDictionary is named '{kv}'", $"{nameof(Extensions)}");
+                    }
+
+                    // Do we have any themes in this resource dictionary?
+                    if (item.ThemeDictionaries.Count > 0)
+                    {
+                        if (theme == ElementTheme.Dark)
+                        {
+                            if (item.ThemeDictionaries.TryGetValue("Dark", out var drd))
+                            {
+                                ResourceDictionary? dark = drd as ResourceDictionary;
+                                if (dark != null)
+                                {
+                                    Debug.WriteLine($"Found dark theme resource dictionary", $"{nameof(Extensions)}");
+                                    if (dark.TryGetValue($"{resourceName}", out var tmp))
+                                        return (T)tmp;
+                                    else
+                                        Debug.WriteLine($"Could not find '{resourceName}'", $"{nameof(Extensions)}");
+                                }
+                            }
+                            else { Debug.WriteLine($"{nameof(ElementTheme.Dark)} theme was not found", $"{nameof(Extensions)}"); }
+                        }
+                        else if (theme == ElementTheme.Light)
+                        {
+                            if (item.ThemeDictionaries.TryGetValue("Light", out var lrd))
+                            {
+                                ResourceDictionary? light = lrd as ResourceDictionary;
+                                if (light != null)
+                                {
+                                    Debug.WriteLine($"Found light theme resource dictionary", $"{nameof(Extensions)}");
+                                    if (light.TryGetValue($"{resourceName}", out var tmp))
+                                        return (T)tmp;
+                                    else
+                                        Debug.WriteLine($"Could not find '{resourceName}'", $"{nameof(Extensions)}");
+                                }
+                            }
+                            else { Debug.WriteLine($"{nameof(ElementTheme.Light)} theme was not found", $"{nameof(Extensions)}"); }
+                        }
+                        else if (theme == ElementTheme.Default)
+                        {
+                            if (item.ThemeDictionaries.TryGetValue("Default", out var drd))
+                            {
+                                ResourceDictionary? dflt = drd as ResourceDictionary;
+                                if (dflt != null)
+                                {
+                                    Debug.WriteLine($"Found default theme resource dictionary", $"{nameof(Extensions)}");
+                                    if (dflt.TryGetValue($"{resourceName}", out var tmp))
+                                        return (T)tmp;
+                                    else
+                                        Debug.WriteLine($"Could not find '{resourceName}'", $"{nameof(Extensions)}");
+                                }
+                            }
+                            else { Debug.WriteLine($"{nameof(ElementTheme.Default)} theme was not found", $"{nameof(Extensions)}"); }
+                        }
+                        else
+                            Debug.WriteLine($"No theme to match", $"{nameof(Extensions)}");
+                    }
+                    else
+                        Debug.WriteLine($"No theme dictionaries found", $"{nameof(Extensions)}");
+                }
+
+                return default(T);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetThemeResource: {ex.Message}", $"{nameof(Extensions)}");
+                return null;
+            }
+        }
+
+        public static async Task<byte[]> AsPng(this UIElement control)
+        {
+            // Get XAML Visual in BGRA8 format
+            var rtb = new RenderTargetBitmap();
+            await rtb.RenderAsync(control, (int)control.ActualSize.X, (int)control.ActualSize.Y);
+
+            // Encode as PNG
+            var pixelBuffer = (await rtb.GetPixelsAsync()).ToArray();
+            IRandomAccessStream mraStream = new InMemoryRandomAccessStream();
+            var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, mraStream);
+            encoder.SetPixelData(
+                BitmapPixelFormat.Bgra8,
+                BitmapAlphaMode.Premultiplied,
+                (uint)rtb.PixelWidth,
+                (uint)rtb.PixelHeight,
+                184,
+                184,
+                pixelBuffer);
+            await encoder.FlushAsync();
+
+            // Transform to byte array
+            var bytes = new byte[mraStream.Size];
+            await mraStream.ReadAsync(bytes.AsBuffer(), (uint)mraStream.Size, InputStreamOptions.None);
+
+            return bytes;
+        }
+
+        public static string RemoveExtraSpaces(this string strText)
+        {
+            if (!string.IsNullOrEmpty(strText))
+                strText = Regex.Replace(strText, @"\s+", " ");
+
+            return strText;
+        }
+
+        /// <summary>
+        /// ExampleTextSample => Example Text Sample
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns>space delimited string</returns>
+        public static string SeparateCamelCase(this string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            StringBuilder result = new StringBuilder();
+            result.Append(input[0]);
+
+            for (int i = 1; i < input.Length; i++)
+            {
+                if (char.IsUpper(input[i]))
+                    result.Append(' ');
+
+                result.Append(input[i]);
+            }
+
+            return result.ToString();
+        }
+
         /// <summary>
         /// var stack = Extensions.GetStackTrace(new StackTrace());
         /// </summary>

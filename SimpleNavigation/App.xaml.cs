@@ -33,8 +33,10 @@ public partial class App : Application
 {
     private Window _window;
     private static UISettings _UISettings = new UISettings();
+    public static Window? MainWindow { get; set; }
     public static SystemState? State { get; set; }
     public static bool IsClosing { get; set; } = false;
+    public static bool DebugMode { get; set; } = false;
     public static IntPtr WindowHandle { get; set; }
     public static FrameworkElement? MainRoot { get; set; }
 #if IS_UNPACKAGED // We're using a custom PropertyGroup Condition we defined in the csproj to help us with the decision.
@@ -78,6 +80,7 @@ public partial class App : Application
 
         // Save the FrameworkElement for future content dialogs.
         App.MainRoot = _window.Content as FrameworkElement;
+        App.MainWindow = _window;
 
         var AppWin = GetAppWindow(_window);
         if (AppWin != null)
