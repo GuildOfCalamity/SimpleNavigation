@@ -65,6 +65,7 @@
 
   <ItemGroup>
     <None Remove="Assets\Background.png" />
+    <None Remove="Assets\FileIcon.png" />
     <None Remove="Assets\gear1.png" />
     <None Remove="Assets\gear2.png" />
     <None Remove="Assets\Win10Logo.ico" />
@@ -73,6 +74,7 @@
     <None Remove="ImagesPage.xaml" />
     <None Remove="MainPage.xaml" />
     <None Remove="NextPage.xaml" />
+    <None Remove="SearchPage.xaml" />
     <None Remove="SettingsPage.xaml" />
     <None Remove="TestPage.xaml" />
   </ItemGroup>
@@ -133,6 +135,11 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Pages\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="SearchPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
   <!-- 

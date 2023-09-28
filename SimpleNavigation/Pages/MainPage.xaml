@@ -392,6 +392,12 @@
                 GroupName="Nav"
                 Style="{StaticResource NavigationRadioButtonStyle}"
                 Tag="SimpleNavigation.ImagesPage" />
+            <RadioButton
+                Click="RadioButton_Click"
+                Content="Search Page"
+                GroupName="Nav"
+                Style="{StaticResource NavigationRadioButtonStyle}"
+                Tag="SimpleNavigation.SearchPage" />
 
         </StackPanel>
 
