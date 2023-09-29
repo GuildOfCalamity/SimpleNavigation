@@ -25,6 +25,11 @@ namespace SimpleNavigation;
 /// </summary>
 public sealed partial class ImagesPage : Page
 {
+    /// <summary>
+    /// An event that the main page can subscribe to.
+    /// </summary>
+    public static event EventHandler<Message>? PostMessageEvent;
+
     public ObservableCollection<ImageFileProps> Images { get; } = new();
 
     public ImagesPage()
@@ -40,8 +45,13 @@ public sealed partial class ImagesPage : Page
     {
         if (e.Parameter != null && e.Parameter is SystemState sys)
         {
-            // ⇦ ⇨ ⇧ ⇩ 🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
+            // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
             Debug.WriteLine($"You sent '{sys.Title}'");
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"OnNavigatedTo ⇨ {sys.Title}",
+                Severity = InfoBarSeverity.Informational,
+            });
         }
         else
         {

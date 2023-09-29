@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -6,18 +6,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 
 namespace SimpleNavigation;
 
@@ -26,7 +20,14 @@ namespace SimpleNavigation;
 /// </summary>
 public sealed partial class SearchPage : Page, INotifyPropertyChanged
 {
-	CancellationTokenSource? _cts;
+    #region [Properties]
+
+    /// <summary>
+    /// An event that the main page can subscribe to.
+    /// </summary>
+    public static event EventHandler<Message>? PostMessageEvent;
+
+    CancellationTokenSource? _cts;
     System.Diagnostics.Process? _process = null;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -54,7 +55,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 		}
 	}
 
-	private int _minSize = 1000000;
+	private int _minSize = 1000000; // 1MB default
 	public int MinSize
 	{
 		get => _minSize;
@@ -76,6 +77,17 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
         }
     }
 
+    private bool _isBusy = false;
+    public bool IsBusy
+    {
+        get => _isBusy;
+        set
+        {
+            _isBusy = value;
+            OnPropertyChanged();
+        }
+    }
+
     ObservableCollection<Item> _items = new();
     public ObservableCollection<Item> Items
     {
@@ -86,11 +98,38 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+    #endregion
 
     public SearchPage()
 	{
 		this.InitializeComponent();
+        this.Loaded += (s, e) => 
+		{ 
+			Status = $"⇦ Click search"; 
+		};
 	}
+
+    /// <summary>
+    /// Handle any parameter passed.
+    /// </summary>
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        if (e.Parameter != null && e.Parameter is SystemState sys)
+        {
+            // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
+            Debug.WriteLine($"You sent '{sys.Title}'");
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"OnNavigatedTo ⇨ {sys.Title}",
+                Severity = InfoBarSeverity.Informational,
+            });
+        }
+        else
+        {
+            Debug.WriteLine($"Parameter is not of type '{nameof(SystemState)}'");
+        }
+        base.OnNavigatedTo(e);
+    }
 
     /// <summary>
     /// <see cref="Button"/> event.
@@ -99,35 +138,61 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 	{
         Status = $"Searching...";
 
-        SearchButton.Visibility = Visibility.Collapsed;
-		CancelButton.Visibility = Visibility.Visible;
-		BusyIndicator.Visibility = Visibility.Visible;
+        PostMessageEvent?.Invoke(this, new Message
+        {
+            Content = $"Search started",
+            Severity = InfoBarSeverity.Informational,
+        });
+
+        IsBusy = true;
 
 		_cts = new CancellationTokenSource(TimeSpan.FromMinutes(60)); // allow search to run for 1 hour max
 		var results = await SearchAsync(SearchPath, FileExt, MinSize, _cts.Token);
 		Status = $"Found {results.Count()} files.";
         if (results != null && results.Count > 0)
         {
-            Items.Clear();
+            // Only clear the list if we have something different.
+			Items.Clear();
+
+			PostMessageEvent?.Invoke(this, new Message
+			{
+				Content = $"Found {results.Count()} files",
+				Severity = InfoBarSeverity.Success,
+			});
+
             var sort = results?.OrderByDescending(x => x.Time).ToList();
-            foreach (var item in sort) { Items.Add(item); }
+			if (sort != null)
+				foreach (var item in sort)
+					Items.Add(item);
+        }
+		else
+		{
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"No files match the criteria",
+                Severity = InfoBarSeverity.Warning,
+            });
         }
 
-        SearchButton.Visibility = Visibility.Visible; 
-        CancelButton.Visibility = Visibility.Collapsed;
-        BusyIndicator.Visibility = Visibility.Collapsed;
+        IsBusy = false;
+
     }
 
-	/// <summary>
-	/// <see cref="Button"/> event.
-	/// </summary>
+    /// <summary>
+    /// <see cref="Button"/> event.
+    /// </summary>
     void CancelButton_Click(object sender, RoutedEventArgs e)
 	{
 		if (_cts != null)
 		{
 			_cts?.Cancel();
-		}
-	}
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"Cancel requested",
+                Severity = InfoBarSeverity.Warning,
+            });
+        }
+    }
 
 	/// <summary>
 	/// <see cref="ListView"/> event.
@@ -144,7 +209,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
                     var test = System.IO.Path.GetDirectoryName(item.Content);
                     if (!string.IsNullOrEmpty(test))
                     {
-                        Debug.WriteLine("Opening Explorer�");
+                        Debug.WriteLine("Opening Explorer…");
                         try
                         {   // Close existing explorer.
                             if (_process != null)
@@ -199,7 +264,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 			{
 				var semaphore = new SemaphoreSlim(maxThreads, maxThreads);
 
-				// This ignore list could be moved to the config for customizing.
+				// This ignore list could be moved to a config file.
 				List<string> ignores = new();
 				ignores.Add(@"\.git");
 				ignores.Add(@"\.vs");
@@ -289,7 +354,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 							{
 								if (minSize > 0 && info.Length >= minSize)
 								{
-									indexDB.Add(new Item { Content = fi, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
+									indexDB.Add(new Item { Content = fi, Attribs = info.Attributes, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
 								}
 								else if (minSize > 0 && info.Length < minSize)
 								{
@@ -297,14 +362,14 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 								}
 								else
 								{
-									indexDB.Add(new Item { Content = fi, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
+									indexDB.Add(new Item { Content = fi, Attribs = info.Attributes, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
 								}
 							}
 							else if (extension.Contains(ext, StringComparison.OrdinalIgnoreCase))
 							{
 								if (minSize > 0 && info.Length >= minSize)
 								{
-									indexDB.Add(new Item { Content = fi, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
+									indexDB.Add(new Item { Content = fi, Attribs = info.Attributes, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
 								}
 								else if (minSize > 0 && info.Length < minSize)
 								{
@@ -312,7 +377,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 								}
 								else
 								{
-									indexDB.Add(new Item { Content = fi, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
+									indexDB.Add(new Item { Content = fi, Attribs = info.Attributes, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
 								}
 							}
 						}
@@ -399,7 +464,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 											var info = new FileInfo(fi);
 											if (minSize > 0 && info.Length >= minSize)
 											{
-												indexDB.Add(new Item { Content = fi, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
+												indexDB.Add(new Item { Content = fi, Attribs = info.Attributes, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
 											}
 											else if (minSize > 0 && info.Length < minSize)
 											{
@@ -407,7 +472,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 											}
 											else
 											{
-												indexDB.Add(new Item { Content = fi, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
+												indexDB.Add(new Item { Content = fi, Attribs = info.Attributes, Size = info.Length.ToFileSize(), Time = $"{info.LastWriteTime.ToString("yyyy-MM-dd")}" });
 											}
 										}
 										else

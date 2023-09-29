@@ -23,6 +23,32 @@ namespace SimpleNavigation
     public static class Extensions
     {
         /// <summary>
+        /// Helper method that can be used to compare if two dictionaries are equal.
+        /// This method uses SequenceEqual to compare the keys and values of the two dictionaries.
+        /// </summary>
+        /// <typeparam name="TKey">key type</typeparam>
+        /// <typeparam name="TValue">value type</typeparam>
+        /// <param name="dict1">first dictionary to compare</param>
+        /// <param name="dict2">second dictionary to compare</param>
+        /// <returns>true if both match, false otherwise</returns>
+        public static bool AreEqual<TKey, TValue>(Dictionary<TKey, TValue> dict1, Dictionary<TKey, TValue> dict2)
+        {
+            if (dict1 == dict2) { return true; }
+            if (dict1 == null || dict2 == null) { return false; }
+            if (dict1.Count != dict2.Count) { return false; }
+
+            var comparer = EqualityComparer<TValue>.Default;
+            foreach (var kvp in dict1)
+            {
+                if (!dict2.TryGetValue(kvp.Key, out TValue value))
+                    return false;
+                if (!comparer.Equals(kvp.Value, value))
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Use this if you only have a root resource dictionary.
         /// var rdBrush = Extensions.GetResource{SolidColorBrush}("PrimaryBrush");
         /// </summary>
@@ -292,7 +318,7 @@ namespace SimpleNavigation
         /// <summary>
         /// Converts long file size into typical browser file size.
         /// </summary>
-        public static string ToFileSize(this ulong size)
+        public static string ToFileSize(this long size)
         {
             if (size < 1024) { return (size).ToString("F0") + " Bytes"; }
             if (size < Math.Pow(1024, 2)) { return (size / 1024).ToString("F0") + "KB"; }
@@ -303,13 +329,25 @@ namespace SimpleNavigation
             return (size / Math.Pow(1024, 6)).ToString("F0") + "EB";
         }
 
-        /// <summary>
-        /// Display a readable sentence as to when that time happened.
-        /// e.g. "5 minutes ago" or "in 2 days"
-        /// </summary>
-        /// <param name="value"><see cref="DateTime"/>the past/future time to compare from now</param>
-        /// <returns>human friendly format</returns>
-        public static string ToReadableTime(this DateTime value, bool useUTC = false)
+		public static bool IsPathTooLong(string path)
+		{
+			try
+			{
+				var tmp = Path.GetFullPath(path);
+				return false;
+			}
+			catch (UnauthorizedAccessException) { return false; }
+			catch (DirectoryNotFoundException) { return false; }
+			catch (PathTooLongException) { return true; }
+		}
+
+		/// <summary>
+		/// Display a readable sentence as to when that time happened.
+		/// e.g. "5 minutes ago" or "in 2 days"
+		/// </summary>
+		/// <param name="value"><see cref="DateTime"/>the past/future time to compare from now</param>
+		/// <returns>human friendly format</returns>
+		public static string ToReadableTime(this DateTime value, bool useUTC = false)
         {
             TimeSpan ts;
             if (useUTC)

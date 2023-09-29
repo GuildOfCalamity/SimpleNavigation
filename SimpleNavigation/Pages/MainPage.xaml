@@ -344,6 +344,57 @@
         RowDefinitions="Auto,*,Auto"
         ToolTipService.ToolTip="{x:Bind local:AssemblyHelper.GetAssemblyName()}">
 
+        <!--  A way for other pages to send messages back to our main page.  -->
+        <InfoBar
+            x:Name="infoBar"
+            Grid.Row="0"
+            Grid.Column="1"
+            Margin="0,0,12,0"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Top"
+            IsOpen="False"
+            Severity="Informational">
+            <!--
+                An InfoBar can also have content extend below the Message area.
+                Uncomment the XAML below to see this in action.
+            -->
+            <!--
+            <InfoBar.Content>
+                <Grid MaxHeight="32" Margin="0,0,0,10">
+                    <ScrollViewer>
+                        <ItemsRepeater x:Name="InfoBarItemsRepeater">
+                            <ItemsRepeater.Transitions>
+                                <RepositionThemeTransition />
+                            </ItemsRepeater.Transitions>
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate x:DataType="local:Message">
+                                    <StackPanel
+                                        Margin="0,2"
+                                        Padding="10,4"
+                                        Background="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}}"
+                                        CornerRadius="5">
+                                        <Grid ColumnDefinitions="2*,1*" ColumnSpacing="6">
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                Text="{x:Bind Content, Mode=OneWay}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Text="{x:Bind Severity, Mode=OneWay}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </ScrollViewer>
+                </Grid>
+            </InfoBar.Content>
+            -->
+        </InfoBar>
+
         <!--  Header  -->
         <TextBlock
             x:Name="pageTitle"
@@ -361,6 +412,7 @@
             Padding="10"
             VerticalAlignment="Top"
             Spacing="10">
+            <!--  Add New Pages Here  -->
             <RadioButton
                 x:Name="rbHome"
                 Click="RadioButton_Click"
@@ -398,6 +450,12 @@
                 GroupName="Nav"
                 Style="{StaticResource NavigationRadioButtonStyle}"
                 Tag="SimpleNavigation.SearchPage" />
+            <RadioButton
+                Click="RadioButton_Click"
+                Content="Bluetooth Page"
+                GroupName="Nav"
+                Style="{StaticResource NavigationRadioButtonStyle}"
+                Tag="SimpleNavigation.BluetoothPage" />
 
         </StackPanel>
 

@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -16,11 +18,12 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.System;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SimpleNavigation;
 
 /// <summary>
-/// An empty page that can be used on its own or navigated to within a Frame.
+/// Our main hub page for navigation and content.
 /// </summary>
 public sealed partial class MainPage : Page, INotifyPropertyChanged
 {
@@ -38,11 +41,14 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    ObservableCollection<Message> _msgs = new();
     #endregion
 
     public MainPage()
     {
         this.InitializeComponent();
+
         // We can setup keyboard events in a number of ways...
         // 1) Add a generic handler event:
         this.AddHandler(KeyDownEvent, new KeyEventHandler(PressedKey), true);
@@ -52,17 +58,44 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
 
         this.Loaded += MainPage_Loaded;
+
+        #region [Setup page-wide messaging]
+        HomePage.PostMessageEvent += MainPage_PostMessageEvent;
+        ImagesPage.PostMessageEvent += MainPage_PostMessageEvent;
+        NextPage.PostMessageEvent += MainPage_PostMessageEvent;
+        SearchPage.PostMessageEvent += MainPage_PostMessageEvent;
+        SettingsPage.PostMessageEvent += MainPage_PostMessageEvent;
+        TestPage.PostMessageEvent += MainPage_PostMessageEvent;
+        #endregion
     }
+
+    void MainPage_PostMessageEvent(object? sender, Message msg) => ShowMessage(msg.Content, msg.Severity);
 
     void MainPage_Loaded(object sender, RoutedEventArgs e)
     {
-        // We starting off by selecting the "Home" page.
+        // We're starting off by selecting the "Home" page.
         // We could let it ride on the MainPage, but we're using the
         // MainPage as a root/hub for any subsequent navigation events.
         SetStartPage(rbHome);
 
         if (App.AnimationsEffectsEnabled)
             StoryboardPath.Begin();
+
+        // An InfoBar can also have content extend below the Message area.
+        //InfoBarItemsRepeater.ItemsSource = _msgs;
+    }
+
+    void ShowMessage(string message, InfoBarSeverity severity)
+    {
+        infoBar.DispatcherQueue.TryEnqueue(() =>
+        {
+            infoBar.IsOpen = true;
+            infoBar.Severity = severity;
+            infoBar.Message = $"{message}";
+            
+            // If using the ItemsRepeater in the InfoBar.
+            _msgs.Add(new Message { Content = $"{message}", Severity = severity });
+        });
     }
 
     /// <summary>
@@ -70,7 +103,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     /// </summary>
     public async Task SetRequestedThemeAsync(ElementTheme theme)
     {
-        if (App.MainWindow.Content is FrameworkElement rootElement)
+        if (App.MainWindow?.Content is FrameworkElement rootElement)
         {
             rootElement.RequestedTheme = theme;
             TitleBarHelper.UpdateTitleBar(theme);
@@ -90,8 +123,8 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             return;
         }
 
-			rb.IsChecked = true;
-			RadioButton_Click(rb, new RoutedEventArgs());
+		rb.IsChecked = true;
+		RadioButton_Click(rb, new RoutedEventArgs());
 	}
 
 	void RadioButton_Click(object sender, RoutedEventArgs e)
@@ -244,7 +277,6 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         args.Handled = true;
     }
     #endregion
-
 }
 
 /// <summary>

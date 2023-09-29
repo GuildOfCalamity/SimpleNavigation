@@ -70,6 +70,7 @@
     <None Remove="Assets\gear2.png" />
     <None Remove="Assets\Win10Logo.ico" />
     <None Remove="Assets\Win10Logo.png" />
+    <None Remove="BluetoothPage.xaml" />
     <None Remove="HomePage.xaml" />
     <None Remove="ImagesPage.xaml" />
     <None Remove="MainPage.xaml" />
@@ -135,6 +136,11 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Pages\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="BluetoothPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="SearchPage.xaml">

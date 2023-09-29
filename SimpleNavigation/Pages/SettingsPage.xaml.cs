@@ -22,6 +22,11 @@ namespace SimpleNavigation;
 /// </summary>
 public sealed partial class SettingsPage : Page
 {
+    /// <summary>
+    /// An event that the main page can subscribe to.
+    /// </summary>
+    public static event EventHandler<Message>? PostMessageEvent;
+
     public SettingsPage()
     {
         Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.DeclaringType?.Name}__{MethodBase.GetCurrentMethod()?.Name} [{DateTime.Now.ToString("hh:mm:ss.fff tt")}]");
@@ -35,9 +40,14 @@ public sealed partial class SettingsPage : Page
     {
         if (e.Parameter != null && e.Parameter is SystemState sys)
         {
-            // ⇦ ⇨ ⇧ ⇩ 🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
+            // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
             Debug.WriteLine($"You sent '{sys.Title}'");
             landing.Text = $"I'm on page {sys.Title}";
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"OnNavigatedTo ⇨ {sys.Title}",
+                Severity = InfoBarSeverity.Informational,
+            });
         }
         else
         {
