@@ -49,9 +49,9 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
         this.InitializeComponent();
 
-        // We can setup keyboard events in a number of ways...
-        // 1) Add a generic handler event:
-        this.AddHandler(KeyDownEvent, new KeyEventHandler(PressedKey), true);
+		// We can setup keyboard events in a number of ways…
+		// 1) Add a generic handler event:
+		this.AddHandler(KeyDownEvent, new KeyEventHandler(PressedKey), true);
         // 2) Add a keyboard accelerator event:
         this.ProcessKeyboardAccelerators += MainPage_ProcessKeyboardAccelerators;
         // 3) Build a keyboard accelerator:
@@ -66,8 +66,9 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         SearchPage.PostMessageEvent += MainPage_PostMessageEvent;
         SettingsPage.PostMessageEvent += MainPage_PostMessageEvent;
         TestPage.PostMessageEvent += MainPage_PostMessageEvent;
-        #endregion
-    }
+        BluetoothPage.PostMessageEvent += MainPage_PostMessageEvent;
+		#endregion
+	}
 
     void MainPage_PostMessageEvent(object? sender, Message msg) => ShowMessage(msg.Content, msg.Severity);
 

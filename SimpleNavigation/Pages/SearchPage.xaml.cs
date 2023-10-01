@@ -136,7 +136,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
     /// </summary>
     async void SearchButton_Click(object sender, RoutedEventArgs e)
 	{
-        Status = $"Searching...";
+        Status = $"Searching…";
 
         PostMessageEvent?.Invoke(this, new Message
         {
@@ -157,7 +157,7 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 			PostMessageEvent?.Invoke(this, new Message
 			{
 				Content = $"Found {results.Count()} files",
-				Severity = InfoBarSeverity.Success,
+				Severity = InfoBarSeverity.Informational,
 			});
 
             var sort = results?.OrderByDescending(x => x.Time).ToList();

@@ -259,14 +259,14 @@ public partial class App : Application
         WinRT.Interop.InitializeWithWindow.Initialize(messageDialog, App.WindowHandle);
         // Show the message dialog. Our DialogDismissedHandler will deal with what selection the user wants.
         await messageDialog.ShowAsync();
-        // We could force the result in a separate timer...
-        //DialogDismissedHandler(new UICommand("time-out"));
-    }
+		// We could force the result in a separate timer…
+		//DialogDismissedHandler(new UICommand("time-out"));
+	}
 
-    /// <summary>
-    /// Callback for the selected option from the user.
-    /// </summary>
-    static void DialogDismissedHandler(IUICommand command)
+	/// <summary>
+	/// Callback for the selected option from the user.
+	/// </summary>
+	static void DialogDismissedHandler(IUICommand command)
     {
         Debug.WriteLine($"UICommand.Label => {command.Label}");
     }
