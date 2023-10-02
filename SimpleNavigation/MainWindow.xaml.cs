@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 
@@ -34,6 +35,14 @@ namespace SimpleNavigation
             else
                 SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
             #endregion
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                Debug.WriteLine($"⇩⇩⇩ [Referenced Assemblies] ⇩⇩⇩");
+                Debug.WriteLine($"{Extensions.GatherReferenceAssemblies(true)}");
+                Debug.WriteLine($"⇧⇧⇧ [Referenced Assemblies] ⇧⇧⇧");
+            });
         }
 
         void Window_Activated(object sender, WindowActivatedEventArgs args)

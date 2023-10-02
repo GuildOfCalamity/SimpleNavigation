@@ -10,7 +10,7 @@
     NavigationCacheMode="Enabled"
     mc:Ignorable="d">
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid x:Name="rootGrid" RowDefinitions="Auto,*">
         <StackPanel
             Grid.Row="0"
             VerticalAlignment="Top"
@@ -47,13 +47,13 @@
                     <DataTemplate x:DataType="local:BTDevice">
                         <StackPanel Orientation="Horizontal" ToolTipService.ToolTip="{x:Bind Name}">
                             <Image
-                                Width="28"
-                                Height="40"
+                                Width="32"
+                                Height="32"
                                 Margin="0,1,10,1"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
                                 Opacity="0.8"
-                                Source="/Assets/Bluetooth.png"
+                                Source="{x:Bind IconPath}"
                                 Stretch="Uniform" />
                             <StackPanel Orientation="Vertical">
                                 <TextBlock

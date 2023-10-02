@@ -23,6 +23,73 @@ namespace SimpleNavigation
     public static class Extensions
     {
         /// <summary>
+        /// Fetch all <see cref="ProcessModule"/>s in the current running process.
+        /// </summary>
+        /// <param name="excludeWinSys">if true any file path starting with %windir% will be excluded from the results</param>
+        public static string GatherReferenceAssemblies(bool excludeWinSys)
+        {
+            var modules = new StringBuilder();
+            var winSys = Environment.GetFolderPath(Environment.SpecialFolder.Windows) ?? "N/A";
+            var winProg = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) ?? "N/A";
+            var self = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name ?? "EmptySelf";
+            try
+            {
+                var process = Process.GetCurrentProcess();
+                foreach (ProcessModule module in process.Modules)
+                {
+                    var fn = module.FileName ?? "Empty";
+                    if (excludeWinSys && !fn.StartsWith(winSys, StringComparison.OrdinalIgnoreCase) && !fn.StartsWith(winProg, StringComparison.OrdinalIgnoreCase) && !fn.StartsWith(self, StringComparison.OrdinalIgnoreCase))
+                        modules.AppendLine($"{Path.GetFileName(fn)} ({GetFileVersion(fn)})");
+                    else if (!excludeWinSys)
+                        modules.AppendLine($"{Path.GetFileName(fn)} ({GetFileVersion(fn)})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GatherReferencedAssemblies: {ex.Message}", nameof(Extensions));
+            }
+            return modules.ToString();
+        }
+
+        /// <summary>
+        /// Brute force alpha removal of FileVersionInfo text
+        /// is not always the best approach, e.g. the following:
+        /// "3.0.0-zmain.2211 (DCPP(199ff10ec000000)(cloudtest).160101.0800)"
+        /// ...converts to:
+        /// "3.0.0.221119910000000.160101.0800"
+        /// ...which is not accurate.
+        /// </summary>
+        /// <param name="fullPath">the entire path to the file</param>
+        /// <returns>sanitized <see cref="Version"/></returns>
+        public static Version GetFileVersion(string fullPath)
+        {
+            try
+            {
+                var ver = FileVersionInfo.GetVersionInfo(fullPath).FileVersion;
+                if (string.IsNullOrEmpty(ver)) { return new Version(); }
+                if (ver.HasSpace())
+                {   // Some assemblies contain versions such as "10.0.22622.1030 (WinBuild.160101.0800)"
+                    // This will cause the Version constructor to throw an exception, so just take the first piece.
+                    var chunk = ver.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var firstPiece = Regex.Replace(chunk[0].Replace(',', '.'), "[^.0-9]", "");
+                    return new Version(firstPiece);
+                }
+                string cleanVersion = Regex.Replace(ver, "[^.0-9]", "");
+                return new Version(cleanVersion);
+            }
+            catch (Exception)
+            {
+                return new Version(); // 0.0
+            }
+        }
+
+        public static bool HasSpace(this string str)
+        {
+            if (string.IsNullOrEmpty(str)) { return false; }
+            return str.Any(x => char.IsSeparator(x));
+        }
+
+        /// <summary>
         /// Helper method that can be used to compare if two dictionaries are equal.
         /// This method uses SequenceEqual to compare the keys and values of the two dictionaries.
         /// </summary>
@@ -271,6 +338,30 @@ namespace SimpleNavigation
             }
 
             return img;
+        }
+
+        /// <summary>
+        ///  var objects = IterateEnumValues{LogLevel}();
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public static IEnumerable<T> IterateEnumValues<T>() where T : Enum
+        {
+            foreach (var value in Enum.GetValues(typeof(T)))
+            {
+                yield return (T)value;
+            }
+        }
+
+        /// <summary>
+        /// var names = IterateEnumNames{LogLevel}();
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public static IEnumerable<string> IterateEnumNames<T>() where T : Enum
+        {
+            foreach (var name in Enum.GetNames(typeof(T)))
+            {
+                yield return $"{name}";
+            }
         }
 
         /// <summary>
