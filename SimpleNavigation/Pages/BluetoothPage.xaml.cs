@@ -102,7 +102,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
     {
         // We shouldn't start another search if the user
         // clicks away to another page and then back again.
-        if (IsBusy) 
+        if (IsBusy || Items.Count > 0) 
             return;
 
         List<BTDevice> collection = new();
@@ -112,7 +112,6 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
         try
         {
             Items.Clear();
-
             await Task.Delay(1000);
 
             #region [short search]
@@ -135,38 +134,42 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                                 var index = icoPath.Split(',')[1].Replace("-","");
                                 icoPath = $"/Assets/ico{index}.ico";
                             }
+
+                            // It's rare that we would access this resource at the same time from the other
+                            // thread, but it's good practice to use a Monitor.Enter() or a locking object.
+                            lock (_locker)
+                            {
+                                collection.Add(new BTDevice
+                                {
+                                    Id = $"{devices[i].Id}",
+                                    Name = $"{(string.IsNullOrEmpty(devices[i].Name) ? "No Name Available" : devices[i].Name)}",
+                                    IsPaired = $"IsPaired: {devices[i].Pairing.IsPaired}",
+                                    Kind = $"{devices[i].Kind}",
+                                    IconPath = $"{icoPath}"
+                                });
+                            }
                         }
                         catch (Exception)
                         {
                             Debug.WriteLine($"🡆 Failed to extract icon property index.");
                             icoPath = "/Assets/Bluetooth.png"; // default
                         }
-
-                        // It's rare that we would access this resource at the same time from the other
-                        // thread, but it's good practice to use a Monitor.Enter() or a locking object.
-                        lock (_locker)
-                        {
-                            collection.Add(new BTDevice
-                            {
-                                Id = $"{devices[i].Id}",
-                                Name = $"{(string.IsNullOrEmpty(devices[i].Name) ? "No Name Available" : devices[i].Name)}",
-                                IsPaired = $"IsPaired: {devices[i].Pairing.IsPaired}",
-                                Kind = $"{devices[i].Kind}",
-                                IconPath = $"{icoPath}"
-                            });
-                        }
                     }
+                }
+                else
+                {
+                    Debug.WriteLine($"🡆 No data from GatherBasic()");
                 }
             }, cts1.Token).ContinueWith(ts =>
             {
                 Debug.WriteLine($"🡆 1st task has '{ts.Status}'");
                 rootGrid.DispatcherQueue.TryEnqueue(() => { Status = $"1st search {ts.Status}"; });
-            }, cts1.Token);
+            });
             #endregion
 
             #region [long search]
             //Status = $"No paired/unpaired devices found, searching further…";
-            CancellationTokenSource cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(180));
+            CancellationTokenSource cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(220));
             Task tsk2 = Task.Run(async () =>
             {
                 var devices = await GatherModerate();
@@ -175,24 +178,46 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                     for (int i = 0; i < devices.Count; i++)
                     {
                         #region [List all KVPs associated with this device]
-                        var props = devices[i].Properties;
-                        Debug.WriteLine($"🡆 [{(string.IsNullOrEmpty(devices[i].Name) ? "No Name Available" : devices[i].Name)}] 🡄");
-                        foreach (var kvp in props)
-                        {
-                            Debug.WriteLine($" 🡒 Key...: {kvp.Key}");
-                            Debug.WriteLine($" 🡒 Value.: {(kvp.Value == null ? "null" : kvp.Value)}");
-                        }
+                        //var props = devices[i].Properties;
+                        //Debug.WriteLine($"🡆 [{(string.IsNullOrEmpty(devices[i].Name) ? "No Name Available" : devices[i].Name)}] 🡄");
+                        //foreach (var kvp in props)
+                        //{
+                        //    Debug.WriteLine($" 🡒 Key...: {kvp.Key}");
+                        //    Debug.WriteLine($" 🡒 Value.: {(kvp.Value == null ? "null" : kvp.Value)}");
+                        //}
                         #endregion
 
                         string? icoPath = "/Assets/Bluetooth.png";
                         try
                         {
-                            // Get a reference to the DDORes.dll asset.
-                            icoPath = props["System.Devices.Icon"] as string;
+							var props = devices[i].Properties;
+							// Get a reference to the DDORes.dll asset.
+							icoPath = props["System.Devices.Icon"] as string;
                             if (!string.IsNullOrEmpty(icoPath))
                             {
                                 var index = icoPath.Split(',')[1].Replace("-", "");
                                 icoPath = $"/Assets/ico{index}.ico";
+                            }
+
+                            var strID = $"{devices[i].Id}";
+                            if (strID.Contains("bluetooth", StringComparison.OrdinalIgnoreCase))
+                            {
+                                lock (_locker)
+                                {
+                                    collection.Add(new BTDevice
+                                    {
+                                        Id = strID,
+                                        Name = $"{(string.IsNullOrEmpty(devices[i].Name) ? "No Name Available" : devices[i].Name)}",
+                                        IsPaired = $"IsPaired: {devices[i].Pairing.IsPaired}",
+                                        Kind = $"{devices[i].Kind}",
+                                        IconPath = $"{icoPath}"
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                // You can inspect the location \HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\SWD to see details about PnPs, SWDs and DAFWSDProviders (WSD: Web Services for Devices).
+                                Debug.WriteLine($"🡆 Probably not an actual Bluetooth device ⇨ {strID}");
                             }
                         }
                         catch (Exception)
@@ -200,36 +225,17 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                             Debug.WriteLine($"🡆 Failed to extract icon property index.");
                             icoPath = "/Assets/Bluetooth.png"; // default
                         }
-
-                        var ico = props["System.Devices.Icon"] as string;
-
-                        var strID = $"{devices[i].Id}";
-                        if (strID.Contains("bluetooth", StringComparison.OrdinalIgnoreCase))
-                        {
-                            lock (_locker)
-                            {
-                                collection.Add(new BTDevice
-                                {
-                                    Id = strID,
-                                    Name = $"{(string.IsNullOrEmpty(devices[i].Name) ? "No Name Available" : devices[i].Name)}",
-                                    IsPaired = $"IsPaired: {devices[i].Pairing.IsPaired}",
-                                    Kind = $"{devices[i].Kind}",
-                                    IconPath = $"{icoPath}"
-                                });
-                            }
-                        }
-                        else
-                        {
-                            // You can inspect the location \HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\SWD to see details about PnPs, SWDs and DAFWSDProviders (WSD: Web Services for Devices).
-                            Debug.WriteLine($"🡆 Probably not an actual Bluetooth device ⇨ {strID}");
-                        }
                     }
+                }
+                else
+                {
+                    Debug.WriteLine($"🡆 No data from GatherModerate()");
                 }
             }, cts2.Token).ContinueWith(ts =>
             {
                 Debug.WriteLine($"🡆 2nd task has '{ts.Status}'");
                 rootGrid.DispatcherQueue.TryEnqueue(() => { Status = $"2nd search {ts.Status}"; });
-            }, cts2.Token);
+            });
             #endregion
 
             #region [handle results]
@@ -320,23 +326,39 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
 	}
 
     /// <summary>
-    /// Our short BT task.
+    /// Our short BT search task.
     /// </summary>
     /// <returns><see cref="DeviceInformationCollection"/></returns>
     public async Task<DeviceInformationCollection?> GatherBasic()
     {
-        DeviceInformationCollection? devices = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
-        return devices;
+        try
+        {
+            DeviceInformationCollection? devices = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
+            return devices;
+        }
+        catch (Exception ex) 
+        {
+            Debug.WriteLine($"GatherBasic: {ex.Message}");
+            return null; 
+        }
     }
 
     /// <summary>
-    /// Our long BT task.
+    /// Our long BT search task.
     /// </summary>
     /// <returns><see cref="DeviceInformationCollection"/></returns>
     public async Task<DeviceInformationCollection?> GatherModerate()
     {
-        string selector = "System.Devices.DevObjectType:=5"; //  We'll only filter by the most basic category.
-        DeviceInformationCollection? devices = await DeviceInformation.FindAllAsync(selector);
-        return devices;
+        try
+        {
+            string selector = "System.Devices.DevObjectType:=5"; //  We'll only filter by the most basic category.
+            DeviceInformationCollection? devices = await DeviceInformation.FindAllAsync(selector);
+            return devices;
+        }
+        catch (Exception ex) 
+        {
+            Debug.WriteLine($"GatherModerate: {ex.Message}");
+            return null; 
+        }
     }
 }

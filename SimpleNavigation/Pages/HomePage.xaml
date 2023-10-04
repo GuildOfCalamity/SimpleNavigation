@@ -3,7 +3,9 @@
     x:Class="SimpleNavigation.HomePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behave="using:SimpleNavigation.Behaviors"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:interact="using:Microsoft.Xaml.Interactivity"
     xmlns:local="using:SimpleNavigation"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Background="Transparent"
@@ -11,41 +13,111 @@
     mc:Ignorable="d">
 
     <Grid Margin="10">
-        <StackPanel
-            HorizontalAlignment="Left"
-            VerticalAlignment="Top"
-            Orientation="Vertical"
-            Spacing="10">
-            <TextBlock
-                x:Name="landing"
-                HorizontalAlignment="Center"
-                FontSize="20" />
-            <TextBlock>
-                <Run
-                    FontSize="18"
-                    Foreground="DodgerBlue"
-                    Text="About…" />
-                <LineBreak />
-                <LineBreak />
-                <Run Text="This is a home-brew demo of how to make your own navigation app." />
-                <LineBreak />
-                <LineBreak />
-                <Run Text="Normally you would use the " />
-                <Run
-                    FontWeight="Medium"
-                    Foreground="Goldenrod"
-                    Text="NavigationView" />
-                <Run Text=" control, which could make life easier." />
-                <LineBreak />
-                <LineBreak />
-                <Run Text="But that control comes with it's own complexity and use-cases." />
-                <LineBreak />
-                <LineBreak />
-                <Run Text="However, the point of this app is to show alternative techniques." />
-                <LineBreak />
-                <LineBreak />
-                <Run Foreground="DodgerBlue" Text="© GuildOfCalamity — September 2023" />
-            </TextBlock>
-        </StackPanel>
+        <ScrollViewer>
+            <StackPanel
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Orientation="Vertical"
+                Spacing="10">
+                <TextBlock
+                    x:Name="landing"
+                    HorizontalAlignment="Center"
+                    FontSize="20" />
+                <TextBlock ToolTipService.ToolTip="Description">
+                    <Run
+                        FontSize="18"
+                        Foreground="{ThemeResource TextForeground1}"
+                        Text="About…" />
+                    <LineBreak />
+                    <LineBreak />
+                    <Run Text="This is a home-brew demo of how to make your own navigation app." />
+                    <LineBreak />
+                    <LineBreak />
+                    <Run Text="Normally you would use the " />
+                    <Run
+                        FontWeight="Medium"
+                        Foreground="Goldenrod"
+                        Text="NavigationView" />
+                    <Run Text=" control, which could make life easier." />
+                    <LineBreak />
+                    <LineBreak />
+                    <Run Text="But that control comes with it's own complexity and use-cases." />
+                    <LineBreak />
+                    <LineBreak />
+                    <Run Text="However, the point of this app is to show alternative techniques." />
+                    <LineBreak />
+                    <LineBreak />
+                    <Run Foreground="{ThemeResource TextForeground1}" Text="Copyright © GuildOfCalamity — October 2023" />
+                </TextBlock>
+                <TextBlock
+                    x:Name="url"
+                    Margin="0,10,0,0"
+                    FontSize="10"
+                    TextWrapping="WrapWholeWords">
+                    <interact:Interaction.Behaviors>
+                        <behave:HyperlinkTextBlockBehavior />
+                    </interact:Interaction.Behaviors>
+                </TextBlock>
+                <StackPanel
+                    x:Name="spReferences"
+                    Orientation="Vertical"
+                    Spacing="10">
+                    <StackPanel.Resources>
+                        <Storyboard
+                            x:Name="StoryboardPath"
+                            AutoReverse="False"
+                            RepeatBehavior="1x">
+                            <DoubleAnimation
+                                x:Name="dblAnimation"
+                                Storyboard.TargetName="spReferences"
+                                Storyboard.TargetProperty="Opacity"
+                                From="0"
+                                To="1"
+                                Duration="0:00:02.5" />
+                        </Storyboard>
+                    </StackPanel.Resources>
+                    <TextBlock
+                        Margin="0,28,0,-4"
+                        FontWeight="Medium"
+                        Foreground="Gray"
+                        Text="Referenced Assemblies"
+                        ToolTipService.ToolTip="Referenced Assemblies" />
+                    <!--  custom divider bar  -->
+                    <Grid
+                        Margin="0,0,0,-4"
+                        ColumnSpacing="0"
+                        RowSpacing="0">
+                        <Rectangle
+                            Height="2"
+                            Margin="0,2,0,0"
+                            HorizontalAlignment="Stretch"
+                            RadiusX="4"
+                            RadiusY="4">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="1,0" EndPoint="1,1">
+                                    <LinearGradientBrush.GradientStops>
+                                        <GradientStop Offset="0" Color="#FF76B9ED" />
+                                        <GradientStop Offset="0.2" Color="#6F76B9ED" />
+                                        <GradientStop Offset="1" Color="#2F76B9ED" />
+                                    </LinearGradientBrush.GradientStops>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Rectangle
+                            Height="2"
+                            Margin="0,-2,0,0"
+                            HorizontalAlignment="Stretch"
+                            Fill="Gray"
+                            RadiusX="4"
+                            RadiusY="4" />
+                    </Grid>
+                    <TextBlock
+                        x:Name="tbReferences"
+                        Foreground="{ThemeResource TextForeground4}"
+                        LineStackingStrategy="BlockLineHeight"
+                        ToolTipService.ToolTip="Referenced Assemblies" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Page>

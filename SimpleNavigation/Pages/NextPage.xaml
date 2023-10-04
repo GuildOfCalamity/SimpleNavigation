@@ -2,7 +2,9 @@
     x:Class="SimpleNavigation.NextPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behave="using:SimpleNavigation.Behaviors"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:interact="using:Microsoft.Xaml.Interactivity"
     xmlns:local="using:SimpleNavigation"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Background="Transparent"
@@ -19,10 +21,21 @@
                 x:Name="landing"
                 HorizontalAlignment="Center"
                 FontSize="20" />
-            <TextBox
-                MinWidth="200"
+            <AutoSuggestBox
+                x:Name="asbName"
+                Width="300"
+                Margin="0,10,0,0"
                 Header="First name"
-                Text="John" />
+                PlaceholderText="Start typing"
+                QueryIcon="Find"
+                QuerySubmitted="AutoSuggestBox_QuerySubmitted">
+                <interact:Interaction.Behaviors>
+                    <behave:TypingPauseBehavior
+                        MinimumCharacters="1"
+                        MinimumDelay="500"
+                        TypingPaused="AutoSuggestBox_TypingPaused" />
+                </interact:Interaction.Behaviors>
+            </AutoSuggestBox>
             <TextBox
                 MinWidth="200"
                 Header="Last name"

@@ -11,22 +11,108 @@
     mc:Ignorable="d">
 
     <Grid Margin="10">
-        <StackPanel
-            HorizontalAlignment="Left"
-            VerticalAlignment="Top"
-            Spacing="10">
-            <TextBlock
-                x:Name="landing"
-                HorizontalAlignment="Center"
-                FontSize="20" />
-            <Grid CornerRadius="5">
-                <ProgressBar
-                    MinWidth="120"
-                    MinHeight="30"
-                    Background="Transparent"
-                    Foreground="SpringGreen"
-                    IsIndeterminate="True" />
-            </Grid>
-        </StackPanel>
+        <ScrollViewer>
+            <StackPanel
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock
+                        x:Name="landing"
+                        HorizontalAlignment="Center"
+                        FontSize="20" />
+                    <AutoSuggestBox
+                        MinWidth="400"
+                        Margin="8,0"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center"
+                        QueryIcon="Find"
+                        QuerySubmitted="ASB_QuerySubmitted" />
+                </StackPanel>
+                <ListView
+                    x:Name="lvMessage"
+                    Grid.Row="1"
+                    ItemsSource="{x:Bind Samples, Mode=OneWay}"
+                    SelectedIndex="{x:Bind SelectedIdx, Mode=TwoWay}"
+                    SelectedItem="{x:Bind Selected, Mode=TwoWay}">
+                    <ListView.Transitions>
+                        <AddDeleteThemeTransition />
+                    </ListView.Transitions>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="local:Message">
+                            <UserControl PointerEntered="ListViewItem_PointerEntered" PointerExited="ListViewItem_PointerExited">
+                                <RelativePanel
+                                    MinWidth="400"
+                                    Margin="0,2"
+                                    Padding="10,4"
+                                    Background="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}, ConverterParameter=80}"
+                                    CornerRadius="5"
+                                    ToolTipService.ToolTip="{x:Bind Content, Mode=OneWay}">
+                                    <RelativePanel.Resources>
+                                        <ThemeShadow x:Name="SharedShadow" />
+                                    </RelativePanel.Resources>
+                                    <TextBlock
+                                        Margin="4,2"
+                                        RelativePanel.AlignLeftWithPanel="True"
+                                        RelativePanel.AlignVerticalCenterWithPanel="True">
+                                        <Run Foreground="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}}" Text="⧉" />
+                                        <Run Foreground="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}}" Text="{x:Bind Severity, Mode=OneWay}" />
+                                        <LineBreak />
+                                        <Run Text="{x:Bind Content, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <StackPanel
+                                        x:Name="HoverButtons"
+                                        Padding="10,1"
+                                        Background="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}, ConverterParameter=200}"
+                                        BorderBrush="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}, ConverterParameter=255}"
+                                        BorderThickness="2"
+                                        CornerRadius="5"
+                                        Orientation="Horizontal"
+                                        RelativePanel.AlignRightWithPanel="True"
+                                        RelativePanel.AlignVerticalCenterWithPanel="True"
+                                        Shadow="{StaticResource SharedShadow}"
+                                        Translation="0,0,32"
+                                        Visibility="Collapsed">
+                                        <Grid ColumnDefinitions="2*,1*" ColumnSpacing="6">
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                Text="{x:Bind Time, Mode=OneWay}" />
+                                            <Button
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Background="Transparent"
+                                                Click="MessageButton_Click"
+                                                Tag="{x:Bind Content, Mode=OneWay}"
+                                                ToolTipService.ToolTip="Delete this message">
+                                                <Button.Content>
+                                                    <SymbolIcon
+                                                        Margin="-6,1"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Symbol="Delete" />
+                                                </Button.Content>
+                                            </Button>
+                                        </Grid>
+                                    </StackPanel>
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="HoveringStates">
+                                            <VisualState x:Name="HoverButtonsHidden" />
+                                            <VisualState x:Name="HoverButtonsShown">
+                                                <VisualState.Setters>
+                                                    <Setter Target="HoverButtons.Visibility" Value="Visible" />
+                                                </VisualState.Setters>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                </RelativePanel>
+                            </UserControl>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Page>

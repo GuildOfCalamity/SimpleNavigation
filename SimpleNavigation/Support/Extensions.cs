@@ -38,7 +38,10 @@ namespace SimpleNavigation
                 foreach (ProcessModule module in process.Modules)
                 {
                     var fn = module.FileName ?? "Empty";
-                    if (excludeWinSys && !fn.StartsWith(winSys, StringComparison.OrdinalIgnoreCase) && !fn.StartsWith(winProg, StringComparison.OrdinalIgnoreCase) && !fn.StartsWith(self, StringComparison.OrdinalIgnoreCase))
+                    if (excludeWinSys && 
+                        !fn.StartsWith(winSys, StringComparison.OrdinalIgnoreCase) && 
+                        !fn.StartsWith(winProg, StringComparison.OrdinalIgnoreCase) && 
+                        !fn.EndsWith($"{self}.exe", StringComparison.OrdinalIgnoreCase))
                         modules.AppendLine($"{Path.GetFileName(fn)} ({GetFileVersion(fn)})");
                     else if (!excludeWinSys)
                         modules.AppendLine($"{Path.GetFileName(fn)} ({GetFileVersion(fn)})");
@@ -588,6 +591,34 @@ namespace SimpleNavigation
         }
 
         /// <summary>
+        /// De-dupe file reader using a <see cref="HashSet{string}"/>.
+        /// </summary>
+        public static HashSet<string> ReadLines(string path)
+        {
+            if (!File.Exists(path))
+                return new();
+
+            return new HashSet<string>(File.ReadAllLines(path), StringComparer.InvariantCultureIgnoreCase);
+        }
+
+        /// <summary>
+        /// De-dupe file writer using a <see cref="HashSet{string}"/>.
+        /// </summary>
+        public static bool WriteLines(string path, IEnumerable<string> lines)
+        {
+            var output = new HashSet<string>(lines, StringComparer.InvariantCultureIgnoreCase);
+
+            using (TextWriter writer = File.CreateText(path))
+            {
+                foreach (var line in output)
+                {
+                    writer.WriteLine(line);
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Starts an animation and returns a <see cref="Task"/> that reports when it completes.
         /// </summary>
         /// <param name="storyboard">The target storyboard to start.</param>
@@ -1015,5 +1046,43 @@ namespace SimpleNavigation
         /// </summary>
         /// <returns>true if Win11 or higher, false otherwise</returns>
         public static bool IsWindows11OrGreater() => Environment.OSVersion.Version >= new Version(10, 0, 22000, 0);
+
+        public static string GetRandomSentence(int wordCount)
+        {
+            string[] table = { "a", "server", "or", "workstation", "PC", "is", "technological", "technology", "power",
+            "system", "used", "for", "diagnosing", "and", "analyzing", "data", "for", "reporting", "to", "on",
+            "user", "monitor", "display", "interaction", "electric", "batteries", "along", "with", "some", "over",
+            "under", "memory", "once", "in", "while", "special", "object", "can be", "found", "inside", "the",
+            "HD", "SSD", "USB", "CDROM", "NVMe", "GPU", "RAM", "NIC", "RAID", "SQL", "API", "XML", "JSON", "website",
+            "at", "cluster", "fiber-optic", "floppy-disk", "media", "storage", "Windows", "operating", "root",
+            "database", "access", "denied", "granted", "file", "files", "folder", "folders", "directory", "path",
+            "registry", "policy", "wire", "wires", "serial", "parallel", "bus", "fast", "slow", "speed", "bits",
+            "bytes", "voltage", "current", "resistance", "wattage", "circuit", "inspection", "measurement", "diagram",
+            "specifications", "robotics", "telecommunication", "applied", "internet", "science", "code", "password",
+            "username", "wireless", "digital", "headset", "programming", "framework", "enabled", "disabled", "timer",
+            "information", "keyboard", "mouse", "printer", "peripheral", "binary", "hexadecimal", "network", "router",
+            "mainframe", "host", "client", "software", "version", "format", "upload", "download", "login", "logout",
+            "embedded", "barcode", "driver", "image", "document", "flow", "layout", "uses", "configuration" };
+
+            string word = string.Empty;
+            StringBuilder builder = new StringBuilder();
+            // Select a random word from the array until word count is satisfied.
+            for (int i = 0; i < wordCount; i++)
+            {
+                string tmp = table[Random.Shared.Next(table.Length)];
+
+                if (wordCount < table.Length)
+                    while (word.Equals(tmp) || builder.ToString().Contains(tmp)) { tmp = table[Random.Shared.Next(table.Length)]; }
+                else
+                    while (word.Equals(tmp)) { tmp = table[Random.Shared.Next(table.Length)]; }
+
+                builder.Append(tmp).Append(' ');
+                word = tmp;
+            }
+            string sentence = builder.ToString().Trim() + ". ";
+            // Set the first letter of the first word in the sentenece to uppercase.
+            sentence = char.ToUpper(sentence[0]) + sentence.Substring(1);
+            return sentence;
+        }
     }
 }

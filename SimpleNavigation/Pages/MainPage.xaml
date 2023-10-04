@@ -2,6 +2,7 @@
     x:Class="SimpleNavigation.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ctrls="using:SimpleNavigation.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:SimpleNavigation"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -275,6 +276,11 @@
                             Content="Change to gear type 6"
                             GroupName="SettingsGroup"
                             Tag="gear6.png" />
+                        <RadioButton
+                            Click="Settings_Click"
+                            Content="Change to gear type 7"
+                            GroupName="SettingsGroup"
+                            Tag="gear7.png" />
                     </StackPanel>
 
                     <TextBlock
@@ -345,6 +351,21 @@
         ToolTipService.ToolTip="{x:Bind local:AssemblyHelper.GetAssemblyName()}">
 
         <!--  A way for other pages to send messages back to our main page.  -->
+        <ctrls:AutoCloseInfoBar
+            x:Name="infoBar"
+            Grid.Row="0"
+            Grid.Column="1"
+            Margin="0,2,12,0"
+            AutoCloseInterval="7000"
+            IsOpen="False"
+            Severity="Informational" />
+
+        <!--
+            An InfoBar can also have content extend below the Message
+            area. Comment out the AutoCloseInfoBar above and Uncomment
+            the standard InfoBar XAML below to see this in action.
+        -->
+        <!--
         <InfoBar
             x:Name="infoBar"
             Grid.Row="0"
@@ -354,11 +375,6 @@
             VerticalAlignment="Top"
             IsOpen="False"
             Severity="Informational">
-            <!--
-                An InfoBar can also have content extend below the Message area.
-                Uncomment the XAML below to see this in action.
-            -->
-            <!--
             <InfoBar.Content>
                 <Grid MaxHeight="32" Margin="0,0,0,10">
                     <ScrollViewer>
@@ -392,8 +408,8 @@
                     </ScrollViewer>
                 </Grid>
             </InfoBar.Content>
-            -->
         </InfoBar>
+        -->
 
         <!--  Header  -->
         <TextBlock
@@ -481,7 +497,10 @@
                             Opacity="1"
                             Source="{x:Bind ImgPath, Mode=OneWay}">
                             <Image.Resources>
-                                <Storyboard x:Name="StoryboardPath" RepeatBehavior="Forever">
+                                <Storyboard
+                                    x:Name="StoryboardPath"
+                                    AutoReverse="False"
+                                    RepeatBehavior="Forever">
                                     <DoubleAnimation
                                         x:Name="dblAnimation"
                                         Storyboard.TargetName="spinnerTransform"

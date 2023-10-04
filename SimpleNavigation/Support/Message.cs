@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Xml.Linq;
 using Microsoft.UI.Xaml.Controls;
 
 namespace SimpleNavigation;
@@ -8,13 +9,13 @@ namespace SimpleNavigation;
 /// </summary>
 public class Message
 {
-    /// <summary>
-    /// Text string
-    /// </summary>
     public string Content { get; set; } = string.Empty;
-
-    /// <summary>
-    /// InfoBar level
-    /// </summary>
     public InfoBarSeverity Severity { get; set; } = InfoBarSeverity.Informational;
+    public DateTime Time { get; set; } = DateTime.Now;
+
+    public bool ApplyFilter(string filter)
+    {
+        return Content.Contains(filter, StringComparison.InvariantCultureIgnoreCase);
+    }
+
 }

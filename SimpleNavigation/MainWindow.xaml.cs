@@ -35,14 +35,6 @@ namespace SimpleNavigation
             else
                 SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
             #endregion
-
-            Task.Run(async () =>
-            {
-                await Task.Delay(1000);
-                Debug.WriteLine($"⇩⇩⇩ [Referenced Assemblies] ⇩⇩⇩");
-                Debug.WriteLine($"{Extensions.GatherReferenceAssemblies(true)}");
-                Debug.WriteLine($"⇧⇧⇧ [Referenced Assemblies] ⇧⇧⇧");
-            });
         }
 
         void Window_Activated(object sender, WindowActivatedEventArgs args)

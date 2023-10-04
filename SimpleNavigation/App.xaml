@@ -21,6 +21,11 @@
                     <local:BooleanToOpacityConverter x:Key="BooleanOpacity" />
                     <local:BooleanToOpacityInverseConverter x:Key="BooleanOpacityInverse" />
                     <local:BooleanToVisibilityInverseConverter x:Key="BooleanVisibilityInverse" />
+                    <local:ColorToLighterColorConverter x:Key="ColorToLighterColor" />
+                    <local:ColorToLighterBrushConverter x:Key="ColorToLighterBrush" />
+                    <local:ColorToDarkerColorConverter x:Key="ColorToDarkerColor" />
+                    <local:ColorToDarkerBrushConverter x:Key="ColorToDarkerBrush" />
+                    <local:BrushToBrushConverter x:Key="BrushToBrush" />
 
                     <x:Double x:Key="HugeFontSize">28</x:Double>
                     <x:Double x:Key="LargeFontSize">20</x:Double>
@@ -43,6 +48,10 @@
                                 x:Key="TextForeground3"
                                 Opacity="1"
                                 Color="#20AFFF" />
+                            <SolidColorBrush
+                                x:Key="TextForeground4"
+                                Opacity="1"
+                                Color="#2070A1" />
                         </ResourceDictionary>
                         <ResourceDictionary x:Key="Light">
                             <Brush x:Key="BackgroundBrush">#AAF0F0F0</Brush>
@@ -58,6 +67,10 @@
                                 x:Key="TextForeground3"
                                 Opacity="1"
                                 Color="#115F87" />
+                            <SolidColorBrush
+                                x:Key="TextForeground4"
+                                Opacity="1"
+                                Color="#10A0F0" />
                         </ResourceDictionary>
                     </ResourceDictionary.ThemeDictionaries>
                 </ResourceDictionary>

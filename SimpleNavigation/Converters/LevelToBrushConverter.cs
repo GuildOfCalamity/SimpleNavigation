@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Controls;
+using System.Diagnostics;
 
 namespace SimpleNavigation;
 
@@ -11,27 +12,34 @@ public class LevelToBrushConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, string language)
     {
+        int alpha = 255;
         SolidColorBrush scb = new SolidColorBrush(Colors.Gray);
 
         if (value == null || value.GetType() != typeof(InfoBarSeverity))
             return scb;
 
+        if (parameter != null && int.TryParse($"{parameter}", out alpha))
+        {
+            if (alpha > 255)
+                alpha = 255;
+        }
+
         switch ((InfoBarSeverity)value)
         {
             case InfoBarSeverity.Informational:
-                scb = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 87, 129, 198));
+                scb = new SolidColorBrush(Windows.UI.Color.FromArgb((byte)alpha, 87, 129, 198));
                 break;
             case InfoBarSeverity.Success:
-                scb = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 200, 130));
+                scb = new SolidColorBrush(Windows.UI.Color.FromArgb((byte)alpha, 0, 200, 130));
                 break;
             case InfoBarSeverity.Warning:
-                scb = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 198, 142, 87));
+                scb = new SolidColorBrush(Windows.UI.Color.FromArgb((byte)alpha, 198, 142, 87));
                 break;
             case InfoBarSeverity.Error:
-                scb = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 198, 87, 88)); // Red
+                scb = new SolidColorBrush(Windows.UI.Color.FromArgb((byte)alpha, 198, 87, 88));
                 break;
             default:
-                scb = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 148, 148, 148));
+                scb = new SolidColorBrush(Windows.UI.Color.FromArgb((byte)alpha, 148, 148, 148));
                 break;
         }
 
