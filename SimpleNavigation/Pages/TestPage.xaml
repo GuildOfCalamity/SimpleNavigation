@@ -11,6 +11,9 @@
     mc:Ignorable="d">
 
     <Grid Margin="10">
+        <Grid.Resources>
+            <ThemeShadow x:Name="SharedShadow" />
+        </Grid.Resources>
         <ScrollViewer>
             <StackPanel
                 HorizontalAlignment="Left"
@@ -40,46 +43,56 @@
                     </ListView.Transitions>
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="local:Message">
-                            <UserControl PointerEntered="ListViewItem_PointerEntered" PointerExited="ListViewItem_PointerExited">
+                            <UserControl
+                                PointerEntered="MessageItem_PointerEntered"
+                                PointerExited="MessageItem_PointerExited"
+                                PointerPressed="MessageItem_PointerPressed">
                                 <RelativePanel
+                                    x:Name="rpMessages"
                                     MinWidth="400"
-                                    Margin="0,2"
+                                    Margin="0,4"
                                     Padding="10,4"
                                     Background="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}, ConverterParameter=80}"
                                     CornerRadius="5"
-                                    ToolTipService.ToolTip="{x:Bind Content, Mode=OneWay}">
-                                    <RelativePanel.Resources>
-                                        <ThemeShadow x:Name="SharedShadow" />
-                                    </RelativePanel.Resources>
+                                    Shadow="{StaticResource SharedShadow}"
+                                    ToolTipService.ToolTip="{x:Bind Content, Mode=OneWay}"
+                                    Translation="0,0,64">
                                     <TextBlock
+                                        x:Name="tbSeverity"
                                         Margin="4,2"
                                         RelativePanel.AlignLeftWithPanel="True"
-                                        RelativePanel.AlignVerticalCenterWithPanel="True">
+                                        RelativePanel.AlignTopWithPanel="True">
                                         <Run Foreground="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}}" Text="⧉" />
                                         <Run Foreground="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}}" Text="{x:Bind Severity, Mode=OneWay}" />
-                                        <LineBreak />
-                                        <Run Text="{x:Bind Content, Mode=OneWay}" />
                                     </TextBlock>
+                                    <TextBlock
+                                        Margin="4,2,4,4"
+                                        RelativePanel.AlignLeftWithPanel="True"
+                                        RelativePanel.Below="tbSeverity"
+                                        Text="{x:Bind Content, Mode=OneWay}"
+                                        TextTrimming="WordEllipsis" />
                                     <StackPanel
-                                        x:Name="HoverButtons"
+                                        x:Name="HoverStack"
                                         Padding="10,1"
                                         Background="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}, ConverterParameter=200}"
-                                        BorderBrush="{x:Bind Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}, ConverterParameter=255}"
+                                        BorderBrush="{ThemeResource BorderBrush1}"
                                         BorderThickness="2"
                                         CornerRadius="5"
                                         Orientation="Horizontal"
                                         RelativePanel.AlignRightWithPanel="True"
                                         RelativePanel.AlignVerticalCenterWithPanel="True"
                                         Shadow="{StaticResource SharedShadow}"
-                                        Translation="0,0,32"
+                                        Translation="0,0,64"
                                         Visibility="Collapsed">
                                         <Grid ColumnDefinitions="2*,1*" ColumnSpacing="6">
                                             <TextBlock
+                                                x:Name="HoverTime"
                                                 Grid.Column="0"
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Center"
                                                 Text="{x:Bind Time, Mode=OneWay}" />
                                             <Button
+                                                x:Name="HoverDelete"
                                                 Grid.Column="1"
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Center"
@@ -99,10 +112,20 @@
                                     </StackPanel>
                                     <VisualStateManager.VisualStateGroups>
                                         <VisualStateGroup x:Name="HoveringStates">
-                                            <VisualState x:Name="HoverButtonsHidden" />
-                                            <VisualState x:Name="HoverButtonsShown">
+                                            <VisualState x:Name="HoverStackHidden">
                                                 <VisualState.Setters>
-                                                    <Setter Target="HoverButtons.Visibility" Value="Visible" />
+                                                    <Setter Target="HoverStack.Visibility" Value="Collapsed" />
+                                                </VisualState.Setters>
+                                            </VisualState>
+                                            <VisualState x:Name="HoverStackShown">
+                                                <VisualState.Setters>
+                                                    <Setter Target="HoverStack.Visibility" Value="Visible" />
+                                                </VisualState.Setters>
+                                            </VisualState>
+                                            <VisualState x:Name="HoverTimeOnlyShown">
+                                                <VisualState.Setters>
+                                                    <Setter Target="HoverStack.Visibility" Value="Visible" />
+                                                    <Setter Target="HoverDelete.Visibility" Value="Collapsed" />
                                                 </VisualState.Setters>
                                             </VisualState>
                                         </VisualStateGroup>
@@ -114,5 +137,35 @@
                 </ListView>
             </StackPanel>
         </ScrollViewer>
+
+        <!--  Notice Dialog  -->
+        <ContentDialog
+            x:Name="NoticeDialog"
+            Background="{Binding Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}, ConverterParameter=220}"
+            CloseButtonText="Cancel"
+            PrimaryButtonText="Update">
+            <RelativePanel MinWidth="550" HorizontalAlignment="Stretch">
+                <TextBox
+                    x:Name="ndContent"
+                    Margin="4"
+                    Header="Message content"
+                    Text="{Binding Content, Mode=TwoWay}" />
+                <TextBox
+                    x:Name="ndSeverity"
+                    Margin="4"
+                    Header="Severity"
+                    RelativePanel.AlignRightWithPanel="True"
+                    RelativePanel.RightOf="ndContent"
+                    Text="{Binding Severity, Mode=TwoWay}"
+                    Visibility="Collapsed" />
+                <TextBox
+                    x:Name="ndTime"
+                    Margin="4"
+                    Header="Time of message"
+                    RelativePanel.AlignLeftWith="ndContent"
+                    RelativePanel.Below="ndContent"
+                    Text="{Binding Time, Mode=TwoWay}" />
+            </RelativePanel>
+        </ContentDialog>
     </Grid>
 </Page>

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Drawing;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
-using Windows.UI;
 
 namespace SimpleNavigation;
 
@@ -16,22 +14,28 @@ public class BrushToBrushConverter : IValueConverter
 
         if (parameter != null && double.TryParse($"{parameter}", out amount))
         {
-            if (amount > 0.99)
+            if (amount > 0.999)
                 amount = 0.9;
         }
 
         try
         {
-            if (value != null && value is SolidColorBrush brush) 
+            if (value != null && value is SolidColorBrush scbrsh) 
             {
-                var color = brush.Color;
+                var color = scbrsh.Color;
+                var factor = 1.0 - amount;
+                return new SolidColorBrush(Windows.UI.Color.FromArgb(color.A, (byte)(color.R * factor), (byte)(color.G * factor), (byte)(color.B * factor)));
+            }
+            else if (value != null && value is Brush brsh)
+            {
+                var color = ((SolidColorBrush)brsh).Color;
                 var factor = 1.0 - amount;
                 return new SolidColorBrush(Windows.UI.Color.FromArgb(color.A, (byte)(color.R * factor), (byte)(color.G * factor), (byte)(color.B * factor)));
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"ColorToBrushConverter: {ex.Message}");
+            Debug.WriteLine($"BrushToBrushConverter: {ex.Message}");
         }
 
         return scb;

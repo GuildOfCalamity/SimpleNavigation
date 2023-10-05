@@ -52,6 +52,10 @@
                                 x:Key="TextForeground4"
                                 Opacity="1"
                                 Color="#2070A1" />
+                            <SolidColorBrush
+                                x:Key="BorderBrush1"
+                                Opacity="0.6"
+                                Color="#A0A0AF" />
                         </ResourceDictionary>
                         <ResourceDictionary x:Key="Light">
                             <Brush x:Key="BackgroundBrush">#AAF0F0F0</Brush>
@@ -71,6 +75,10 @@
                                 x:Key="TextForeground4"
                                 Opacity="1"
                                 Color="#10A0F0" />
+                            <SolidColorBrush
+                                x:Key="BorderBrush1"
+                                Opacity="0.6"
+                                Color="#30303F" />
                         </ResourceDictionary>
                     </ResourceDictionary.ThemeDictionaries>
                 </ResourceDictionary>

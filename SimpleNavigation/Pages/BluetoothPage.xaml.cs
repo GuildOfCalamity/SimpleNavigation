@@ -31,7 +31,10 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
     public static event EventHandler<Message>? PostMessageEvent;
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    protected void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? ""));
+    }
 
     private string _status = string.Empty;
     public string Status

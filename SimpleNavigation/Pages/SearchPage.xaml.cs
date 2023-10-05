@@ -31,9 +31,12 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
     System.Diagnostics.Process? _process = null;
 
     public event PropertyChangedEventHandler? PropertyChanged;
-	protected void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? ""));
+    }
 
-	private string _searchPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    private string _searchPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 	public string SearchPath
 	{
 		get => _searchPath;

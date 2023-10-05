@@ -29,7 +29,10 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 {
     #region [Properties]
     public event PropertyChangedEventHandler? PropertyChanged;
-    protected void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? ""));
+    }
 
     private string _imgPath = "/Assets/gear1.png";
     public string ImgPath

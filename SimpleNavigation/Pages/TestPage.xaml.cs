@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,11 +14,15 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
+using System.Windows.Input;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Media.Protection.PlayReady;
 
 namespace SimpleNavigation;
 
@@ -28,7 +33,10 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
 {
     #region [Properties]
     public event PropertyChangedEventHandler? PropertyChanged;
-    protected void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? ""));
+    }
 
     private Message? _selected = new Message { Content = "Informational Message Text", Severity = InfoBarSeverity.Informational };
     public Message? Selected
@@ -43,6 +51,7 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
             }
         }
     }
+    public bool HasSelected => _selected != null && _selectedIdx > -1;
 
     private int _selectedIdx = -1;
     public int SelectedIdx
@@ -60,7 +69,9 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
 
     private string? filter;
     private ObservableCollection<Message> _samples = new();
-    public ObservableCollection<Message> Samples => filter is null ? _samples : new ObservableCollection<Message>(_samples.Where(i => ApplyFilter(i, filter)));
+    public ObservableCollection<Message> Samples => string.IsNullOrEmpty(filter) 
+        ? _samples 
+        : new ObservableCollection<Message>(_samples.Where(i => ApplyFilter(i, filter)));
     #endregion
 
     /// <summary>
@@ -73,6 +84,7 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
         Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.DeclaringType?.Name}__{MethodBase.GetCurrentMethod()?.Name} [{DateTime.Now.ToString("hh:mm:ss.fff tt")}]");
         this.InitializeComponent();
         this.Loaded += TestPage_Loaded;
+        NoticeDialog.Opened += NoticeDialog_Opened;
     }
 
     #region [Events]
@@ -102,9 +114,16 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
 
     void TestPage_Loaded(object sender, RoutedEventArgs e)
     {
-        for (int i = 0; i < 31; i++)
+        if (Samples.Count == 0)
         {
-            Samples.Add(new Message { Content = Extensions.GetRandomSentence(Random.Shared.Next(8,18)), Severity = GetRandomSeverity(), Time = DateTime.Now.AddDays(-1 * Random.Shared.Next(1, 31)) });
+            Task.Run(async () =>
+            {
+                foreach (var m in GenerateMessages())
+                {
+                    await Task.Delay(50);
+                    lvMessage.DispatcherQueue.TryEnqueue(() => { Samples.Add(m); });
+                }
+            });
         }
     }
 
@@ -151,21 +170,61 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
         });
     }
 
-    void ListViewItem_PointerEntered(object sender, PointerRoutedEventArgs e)
+    void MessageItem_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
         if (e.Pointer.PointerDeviceType is Microsoft.UI.Input.PointerDeviceType.Mouse or Microsoft.UI.Input.PointerDeviceType.Pen)
         {
-            VisualStateManager.GoToState(sender as Control, "HoverButtonsShown", true);
+            if (string.IsNullOrEmpty(filter))
+                VisualStateManager.GoToState(sender as Control, "HoverStackShown", true);
+            else // the filtered set is a copy of the original
+                VisualStateManager.GoToState(sender as Control, "HoverTimeOnlyShown", true);
         }
     }
 
-    void ListViewItem_PointerExited(object sender, PointerRoutedEventArgs e)
+    void MessageItem_PointerExited(object sender, PointerRoutedEventArgs e)
     {
-        VisualStateManager.GoToState(sender as Control, "HoverButtonsHidden", true);
+        VisualStateManager.GoToState(sender as Control, "HoverStackHidden", true);
+    }
+
+    async void MessageItem_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        var ctrl = sender as Control;
+        if (ctrl != null)
+        {
+            var msg = ctrl.DataContext as Message;
+
+            #region [Extract object using NoticeDialog's DataContext]
+            //await Task.Run(async () =>
+            //{
+            //    // Allow time for the list selection to render.
+            //    // If not the focus of the ContentDialog's TextBox may fail.
+            //    // This is caused by the changing of the PointerPressed event to asynchronous.
+            //    await Task.Delay(150);
+            //    NoticeDialog.DispatcherQueue.TryEnqueue(async () =>
+            //    {
+            //        await OpenNoticeDialog(msg);
+            //    });
+            //});
+            #endregion
+
+            #region [Extract object using NoticeDialog's CommandParameter]
+            await Task.Run(async () =>
+            {
+                // Allow time for the list selection to render.
+                // If not the focus of the ContentDialog's TextBox may fail.
+                // This is caused by the changing of the PointerPressed event to asynchronous.
+                await Task.Delay(150);
+                NoticeDialog.DispatcherQueue.TryEnqueue(async () =>
+                {
+                    await OpenNoticeDialogWithCommandParam(msg);
+                });
+            });
+            #endregion
+        }
     }
     #endregion
 
-    #region [Methods]
+    #region [Helper Methods]
     private bool ApplyFilter(Message item, string filter)
     {
         return item.ApplyFilter(filter);
@@ -179,6 +238,95 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
             case 1: return InfoBarSeverity.Warning;
             case 2: return InfoBarSeverity.Success;
             default: return InfoBarSeverity.Informational;
+        }
+    }
+
+    private List<Message> GenerateMessages(int amount = 20)
+    {
+        List<Message> messages = new();
+        for (int i = 0; i < amount; i++)
+        {
+            // The average number of words in a sentence is typically between 15 and 20.
+            messages.Add(new Message { Content = Extensions.GetRandomSentence(Random.Shared.Next(8, 20)), Severity = GetRandomSeverity(), Time = DateTime.Now.AddDays(-1 * Random.Shared.Next(1, 31)) });
+        }
+        return messages.OrderByDescending(o => o.Time).ToList();
+    }
+    #endregion
+
+    #region [Content Dialog]
+    private Message? copyOfMessage = null;
+    private ICommand DoneCommand => new RelayCommand(Update);
+    private ICommand DoneCommandWithParam => new RelayCommand<Message>((modified) => 
+    {
+        if (modified == null || copyOfMessage == null)
+            return;
+
+        if (copyOfMessage.Content != modified.Content || copyOfMessage.Time != modified.Time)
+        {
+            // Our Message type does not inherit from ObservableObject, so we'll need to trigger a ListView refresh.
+            lvMessage.DispatcherQueue.TryEnqueue(() =>
+            {
+                lvMessage.ItemsSource = null;
+                lvMessage.ItemsSource = Samples;
+                Selected = null;
+            });
+        }
+    });
+
+    async Task OpenNoticeDialog(Message? msg)
+    {
+        if (msg == null)
+            return;
+
+        copyOfMessage = new Message { Content = msg.Content, Severity = msg.Severity, Time = msg.Time };
+
+        NoticeDialog.Title = "Edit Message";
+        NoticeDialog.PrimaryButtonText = "Done";
+        NoticeDialog.PrimaryButtonCommand = DoneCommand;
+        NoticeDialog.CloseButtonText = "";
+        NoticeDialog.DataContext = msg;
+        await NoticeDialog.ShowAsync();
+    }
+
+    async Task OpenNoticeDialogWithCommandParam(Message? msg)
+    {
+        if (msg == null)
+            return;
+
+        copyOfMessage = new Message { Content = msg.Content, Severity = msg.Severity, Time = msg.Time };
+
+        NoticeDialog.Title = "Edit Message";
+        NoticeDialog.PrimaryButtonText = "Done";
+        NoticeDialog.PrimaryButtonCommand = DoneCommandWithParam;
+        NoticeDialog.PrimaryButtonCommandParameter = msg;
+        NoticeDialog.CloseButtonText = "";
+        NoticeDialog.DataContext = msg;
+        await NoticeDialog.ShowAsync();
+    }
+
+    void NoticeDialog_Opened(ContentDialog sender, ContentDialogOpenedEventArgs args)
+    {
+        ndContent.Focus(FocusState.Programmatic);
+        //if (ndContent.Text.Length > 0)
+        //    ndContent.SelectAll();
+    }
+
+    private void Update()
+    {
+        var modified = NoticeDialog.DataContext as Message;
+
+        if (modified == null || copyOfMessage == null)
+            return;
+
+        if (copyOfMessage.Content != modified.Content || copyOfMessage.Time != modified.Time)
+        {
+            // Our Message type does not inherit from ObservableObject, so we'll need to trigger a ListView refresh.
+            lvMessage.DispatcherQueue.TryEnqueue(() =>
+            {
+                lvMessage.ItemsSource = null;
+                lvMessage.ItemsSource = Samples;
+                Selected = null;
+            });
         }
     }
     #endregion
