@@ -11,7 +11,13 @@ using System.Threading.Tasks;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.Storage.AccessCache;
+using Windows.Storage.Pickers;
+using Windows.Storage;
+using Windows.Storage.Provider;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace SimpleNavigation;
 
@@ -134,6 +140,109 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
         base.OnNavigatedTo(e);
     }
 
+    #region [Folder Picker]
+    async void FolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Create a folder picker
+        FolderPicker openPicker = new Windows.Storage.Pickers.FolderPicker();
+
+        // Retrieve the window handle (HWND) of the current WinUI 3 window.
+        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+
+        // Initialize the folder picker with the window handle (HWND).
+        WinRT.Interop.InitializeWithWindow.Initialize(openPicker, hWnd);
+
+        // Set options for your folder picker
+        openPicker.SuggestedStartLocation = PickerLocationId.Desktop;
+        openPicker.FileTypeFilter.Add("*");
+
+        // Open the picker for the user to pick a folder
+        StorageFolder folder = await openPicker.PickSingleFolderAsync();
+        if (folder != null)
+        {
+			if (App.IsPackaged)
+				StorageApplicationPermissions.FutureAccessList.AddOrReplace("PickedFolderToken", folder);
+
+            SearchPath = folder.Path;
+
+            var package = new DataPackage();
+            package.SetText(SearchPath);
+            Clipboard.SetContent(package);
+
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"Picked '{folder.Name}' from '{folder.Provider.DisplayName}'",
+                Severity = InfoBarSeverity.Informational,
+            });
+        }
+        else
+        {
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = "Folder picking operation cancelled",
+                Severity = InfoBarSeverity.Informational,
+            });
+        }
+    }
+    #endregion
+
+    #region [File Picker]
+    async void SaveFileButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Create a file picker
+        FileSavePicker savePicker = new Windows.Storage.Pickers.FileSavePicker();
+        // Retrieve the window handle (HWND) of the current WinUI 3 window.
+        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+        // Initialize the file picker with the window handle (HWND).
+        WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hWnd);
+        // Set options for your file picker
+        savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        // Dropdown of file types the user can save the file as
+        savePicker.FileTypeChoices.Add("Plain Text", new List<string>() { ".txt" });
+        // Default file name if the user does not type one in or select a file to replace
+        var enteredFileName = ((sender as Button)?.Parent as StackPanel)?.FindName("SearchPathTextBox") as TextBox;
+        savePicker.SuggestedFileName = enteredFileName?.Text;
+        // Open the picker for the user to pick a file
+        StorageFile file = await savePicker.PickSaveFileAsync();
+        if (file != null)
+        {
+            // Prevent updates to the remote version of the file until we finish making changes and call CompleteUpdatesAsync.
+            CachedFileManager.DeferUpdates(file);
+            // Write to file
+            var textBox = ((sender as Button)?.Parent as StackPanel)?.FindName("SearchExtensionTextBox") as TextBox;
+            using (var stream = await file.OpenStreamForWriteAsync())
+            {
+                using (var tw = new StreamWriter(stream))
+                {
+                    tw.WriteLine(textBox?.Text);
+                }
+            }
+            // Another way to write a string to the file is to use this instead:
+            // await FileIO.WriteTextAsync(file, "Example file contents.");
+
+            // Let Windows know that we're finished changing the file so the other app can update the remote version of the file.
+            // Completing updates may require Windows to ask for user input.
+            FileUpdateStatus status = await CachedFileManager.CompleteUpdatesAsync(file);
+            if (status == FileUpdateStatus.Complete)
+            {
+                Debug.WriteLine("File '" + file.Name + "' was saved.");
+            }
+            else if (status == FileUpdateStatus.CompleteAndRenamed)
+            {
+                Debug.WriteLine("File '" + file.Name + "' was renamed and saved.");
+            }
+            else
+            {
+                Debug.WriteLine("File '" + file.Name + "' couldn't be saved.");
+            }
+        }
+        else
+        {
+            Debug.WriteLine("File operation cancelled.");
+        }
+    }
+    #endregion
+
     /// <summary>
     /// <see cref="Button"/> event.
     /// </summary>
@@ -233,6 +342,17 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// An example of extracting the <see cref="ObservableCollection{T}"/> from an event.
+    /// This is unnecessary as we already have access to the collection inside the class scope.
+    /// </summary>
+    void ListView_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        var items = ((ListView)sender).ItemsSource as ObservableCollection<Item>;
+        if (items != null)
+            Debug.WriteLine($"The control contains {items.Count} items.");
     }
 
     #region [Search Methods]
@@ -528,4 +648,5 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
 	}
 
     #endregion
+
 }

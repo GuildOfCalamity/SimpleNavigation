@@ -102,6 +102,9 @@ public partial class App : Application
         AppWin?.Resize(new Windows.Graphics.SizeInt32(1100, 700));
         
         CenterWindow(_window);
+
+        if (Debugger.IsAttached)
+            DebugMode = true;
     }
 
     #region [Domain Events]

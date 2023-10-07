@@ -1,28 +1,18 @@
-﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.VisualBasic;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-using Windows.Media.Protection.PlayReady;
+
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Navigation;
 
 namespace SimpleNavigation;
 
@@ -118,9 +108,9 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
         {
             Task.Run(async () =>
             {
-                foreach (var m in GenerateMessages())
+                foreach (var m in Extensions.GenerateMessages())
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(30);
                     lvMessage.DispatcherQueue.TryEnqueue(() => { Samples.Add(m); });
                 }
             });
@@ -230,27 +220,6 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
         return item.ApplyFilter(filter);
     }
 
-    private InfoBarSeverity GetRandomSeverity()
-    {
-        switch (Random.Shared.Next(5))
-        {
-            case 0: return InfoBarSeverity.Error;
-            case 1: return InfoBarSeverity.Warning;
-            case 2: return InfoBarSeverity.Success;
-            default: return InfoBarSeverity.Informational;
-        }
-    }
-
-    private List<Message> GenerateMessages(int amount = 20)
-    {
-        List<Message> messages = new();
-        for (int i = 0; i < amount; i++)
-        {
-            // The average number of words in a sentence is typically between 15 and 20.
-            messages.Add(new Message { Content = Extensions.GetRandomSentence(Random.Shared.Next(8, 20)), Severity = GetRandomSeverity(), Time = DateTime.Now.AddDays(-1 * Random.Shared.Next(1, 31)) });
-        }
-        return messages.OrderByDescending(o => o.Time).ToList();
-    }
     #endregion
 
     #region [Content Dialog]

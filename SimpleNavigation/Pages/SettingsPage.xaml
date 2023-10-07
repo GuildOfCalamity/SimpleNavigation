@@ -10,22 +10,144 @@
     NavigationCacheMode="Enabled"
     mc:Ignorable="d">
 
+    <Page.Resources>
+        <x:Double x:Key="ColorSize">32</x:Double>
+    </Page.Resources>
+
     <Grid Margin="10">
         <StackPanel
+            MinWidth="500"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
             Orientation="Vertical"
             Spacing="10">
-            <TextBlock
-                x:Name="landing"
-                HorizontalAlignment="Center"
-                FontSize="20" />
-            <CheckBox Content="Option #1" />
-            <CheckBox Content="Option #2" />
-            <CheckBox Content="Option #3" />
-            <CheckBox Content="Option #4" />
-            <CheckBox Content="Option #5" />
-            <CheckBox Content="Option #6" />
+            <TextBlock x:Name="landing" FontSize="20" />
+            <!--  GroupBox-Style Options  -->
+            <Grid
+                x:Name="settingsGrid"
+                Width="260"
+                Height="220"
+                Margin="0,10,0,2"
+                HorizontalAlignment="Left"
+                CornerRadius="5"
+                RowDefinitions="Auto, *"
+                ToolTipService.ToolTip="Other Options">
+                <!--  Header  -->
+                <Border
+                    Grid.RowSpan="99"
+                    Margin="0"
+                    Background="Transparent"
+                    BorderBrush="{ThemeResource BorderBrush1}"
+                    BorderThickness="3"
+                    Opacity="0.3" />
+                <Border
+                    Margin="0"
+                    Background="{ThemeResource SystemAccentColor}"
+                    BorderThickness="0"
+                    Opacity="0.3" />
+                <TextBlock
+                    Margin="10"
+                    Padding="0"
+                    HorizontalAlignment="Stretch"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Text="Other Options" />
+                <!--  Content  -->
+                <StackPanel
+                    Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="10">
+                    <!--
+                        This CheckBox demonstrates the IsChecked binding to a local DependencyProperty.
+                    -->
+                    <CheckBox Content="Option #1" IsChecked="{x:Bind IsOptionChecked, Mode=TwoWay}" />
+                    <CheckBox Content="Option #2" />
+                    <CheckBox Content="Option #3" />
+
+                    <StackPanel
+                        Margin="0,10,0,10"
+                        Orientation="Horizontal"
+                        Spacing="10">
+                        <TextBlock
+                            Padding="0"
+                            VerticalAlignment="Center"
+                            FontSize="18"
+                            Text="Color:" />
+                        <!--
+                            SplitButton with Flyout GridView
+                        -->
+                        <SplitButton
+                            x:Name="myColorButton"
+                            MinWidth="0"
+                            MinHeight="0"
+                            Padding="0"
+                            AutomationProperties.Name="Font color"
+                            Click="myColorButton_Click">
+                            <Border
+                                x:Name="CurrentColor"
+                                Width="{StaticResource ColorSize}"
+                                Height="{StaticResource ColorSize}"
+                                Margin="0"
+                                Background="Blue"
+                                CornerRadius="4,0,0,4" />
+                            <SplitButton.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <GridView
+                                        Background="Transparent"
+                                        IsItemClickEnabled="True"
+                                        ItemClick="GridView_ItemClick">
+                                        <GridView.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <ItemsWrapGrid MaximumRowsOrColumns="3" Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </GridView.ItemsPanel>
+                                        <GridView.Resources>
+                                            <Style TargetType="Rectangle">
+                                                <Setter Property="Width" Value="{StaticResource ColorSize}" />
+                                                <Setter Property="Height" Value="{StaticResource ColorSize}" />
+                                                <Setter Property="RadiusX" Value="4" />
+                                                <Setter Property="RadiusY" Value="4" />
+                                            </Style>
+                                        </GridView.Resources>
+                                        <GridView.Items>
+                                            <Rectangle AutomationProperties.Name="Red" Fill="Red" />
+                                            <Rectangle AutomationProperties.Name="Orange" Fill="Orange" />
+                                            <Rectangle AutomationProperties.Name="Yellow" Fill="Yellow" />
+                                            <Rectangle AutomationProperties.Name="Green" Fill="Green" />
+                                            <Rectangle AutomationProperties.Name="Cyan" Fill="Cyan" />
+                                            <Rectangle AutomationProperties.Name="Blue" Fill="Blue" />
+                                            <Rectangle AutomationProperties.Name="Indigo" Fill="Indigo" />
+                                            <Rectangle AutomationProperties.Name="Violet" Fill="Violet" />
+                                            <Rectangle AutomationProperties.Name="Gray" Fill="Gray" />
+                                        </GridView.Items>
+                                    </GridView>
+
+                                </Flyout>
+                            </SplitButton.Flyout>
+                        </SplitButton>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!--
+                This TreeView demonstrates the SelectedItem binding to a local DependencyProperty.
+            -->
+            <TreeView
+                x:Name="sampleTreeView"
+                SelectedItem="{x:Bind SelectedNode, Mode=TwoWay}"
+                SelectionMode="Single"
+                ToolTipService.ToolTip="TreeView Settings">
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="CollapsedGlyph" Value="&#xedda;" />
+                        <Setter Property="ExpandedGlyph" Value="&#xeddc;" />
+                        <Setter Property="GlyphBrush" Value="{ThemeResource TextForeground1}" />
+                    </Style>
+                </TreeView.ItemContainerStyle>
+            </TreeView>
+
+
         </StackPanel>
     </Grid>
 </Page>

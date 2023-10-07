@@ -17,11 +17,105 @@ using Windows.Storage;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
+using Microsoft.UI.Xaml.Controls;
 
 namespace SimpleNavigation
 {
     public static class Extensions
     {
+        #region [UI Helpers]
+        public static IEnumerable<T> GetDescendantsOfType<T>(this DependencyObject start) where T : DependencyObject
+        {
+            return start.GetDescendants().OfType<T>();
+        }
+
+        public static IEnumerable<DependencyObject> GetDescendants(this DependencyObject start)
+        {
+            var queue = new Queue<DependencyObject>();
+            var parentCount = VisualTreeHelper.GetChildrenCount(start);
+            for (int i = 0; i < parentCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(start, i);
+                yield return child;
+                queue.Enqueue(child);
+            }
+
+            while (queue.Count > 0)
+            {
+                var parent = queue.Dequeue();
+                var childCount = VisualTreeHelper.GetChildrenCount(parent);
+                for (int i = 0; i < childCount; i++)
+                {
+                    var child = VisualTreeHelper.GetChild(parent, i);
+                    yield return child;
+                    queue.Enqueue(child);
+                }
+            }
+        }
+
+        public static UIElement? FindElementByName(this UIElement element, string name)
+        {
+            if (element.XamlRoot != null && element.XamlRoot.Content != null)
+            {
+                var ele = (element.XamlRoot.Content as FrameworkElement)?.FindName(name);
+                if (ele != null)
+                    return ele as UIElement;
+            }
+            return null;
+        }
+        #endregion
+
+        #region [Window Tracking]
+        static private List<Window> _activeWindows = new List<Window>();
+        /// <summary>
+        /// From inside a Page or Control: var window = Extensions.GetWindowForElement(this);
+        /// </summary>
+        /// <param name="element">the <see cref="UIElement"/> of the control or page</param>
+        /// <returns><see cref="Window"/></returns>
+        public static Window? GetWindowForElement(UIElement element)
+        {
+            if (element.XamlRoot != null)
+            {
+                foreach (Window window in _activeWindows)
+                {
+                    if (element.XamlRoot == window.Content.XamlRoot)
+                        return window;
+                }
+            }
+            return null;
+        }
+        public static void StoreWindow(Window window)
+        {
+            if (_activeWindows.Count > 0 && _activeWindows.Contains(window)) { return; }
+            window.Closed += (sender, args) => { _activeWindows.Remove(window); };
+            _activeWindows.Add(window);
+        }
+        #endregion
+
+        #region [Data Helpers]
+        public static List<Message> GenerateMessages(int amount = 20)
+        {
+            List<Message> messages = new();
+            for (int i = 0; i < amount; i++)
+            {
+                // The average number of words in a sentence is typically between 15 and 20.
+                messages.Add(new Message { Content = Extensions.GetRandomSentence(Random.Shared.Next(8, 20)), Severity = GetRandomSeverity(), Time = DateTime.Now.AddDays(-1 * Random.Shared.Next(1, 31)) });
+            }
+            return messages.OrderByDescending(o => o.Time).ToList();
+        }
+
+        public static InfoBarSeverity GetRandomSeverity()
+        {
+            switch (Random.Shared.Next(5))
+            {
+                case 0: return InfoBarSeverity.Error;
+                case 1: return InfoBarSeverity.Warning;
+                case 2: return InfoBarSeverity.Success;
+                default: return InfoBarSeverity.Informational;
+            }
+        }
+        #endregion
+
         /// <summary>
         /// Fetch all <see cref="ProcessModule"/>s in the current running process.
         /// </summary>
@@ -325,6 +419,38 @@ namespace SimpleNavigation
             return urls;
         }
 
+        /// <summary>
+        /// This method will find all occurrences of a string pattern that starts with a double 
+        /// quote, followed by any number of characters (non-greedy), and ends with a double 
+        /// quote followed by zero or more spaces and a colon. This pattern matches the typical 
+        /// format of keys in a JSON string.
+        /// </summary>
+        /// <param name="jsonString">JSON formatted text</param>
+        /// <returns><see cref="List{T}"/> of each key</returns>
+        public static List<string> ExtractKeys(string jsonString)
+        {
+            var keys = new List<string>();
+            var matches = Regex.Matches(jsonString, "[,\\{]\"(.*?)\"\\s*:");
+            foreach (Match match in matches) { keys.Add(match.Groups[1].Value); }
+            return keys;
+        }
+
+        /// <summary>
+        /// This method will find all occurrences of a string pattern that starts with a colon, 
+        /// followed by zero or more spaces, followed by any number of characters (non-greedy), 
+        /// and ends with a comma, closing brace, or closing bracket. This pattern matches the 
+        /// typical format of values in a JSON string.
+        /// </summary>
+        /// <param name="jsonString">JSON formatted text</param>
+        /// <returns><see cref="List{T}"/> of each value</returns>
+        public static List<string> ExtractValues(string jsonString)
+        {
+            var values = new List<string>();
+            var matches = Regex.Matches(jsonString, ":\\s*(.*?)(,|}|\\])");
+            foreach (Match match in matches) { values.Add(match.Groups[1].Value.Trim()); }
+            return values;
+        }
+
         public static BitmapImage? GetImageFromAssets(this string assetName)
         {
             BitmapImage? img = null;
@@ -547,13 +673,12 @@ namespace SimpleNavigation
             }
         }
 
-
         /// <summary>
         /// IEnumerable file reader.
         /// </summary>
         public static IEnumerable<string> ReadFileLines(string path)
         {
-            string line = string.Empty;
+            string? line = string.Empty;
 
             if (!File.Exists(path))
                 yield return line;
@@ -574,7 +699,7 @@ namespace SimpleNavigation
         /// </summary>
         public static async IAsyncEnumerable<string> ReadFileLinesAsync(string path)
         {
-            string line = string.Empty;
+            string? line = string.Empty;
 
             if (!File.Exists(path))
                 yield return line;
@@ -591,7 +716,7 @@ namespace SimpleNavigation
         }
 
         /// <summary>
-        /// De-dupe file reader using a <see cref="HashSet{string}"/>.
+        /// De-dupe file reader using a <see cref="HashSet{T}"/>.
         /// </summary>
         public static HashSet<string> ReadLines(string path)
         {
@@ -602,19 +727,16 @@ namespace SimpleNavigation
         }
 
         /// <summary>
-        /// De-dupe file writer using a <see cref="HashSet{string}"/>.
+        /// De-dupe file writer using a <see cref="HashSet{T}"/>.
         /// </summary>
         public static bool WriteLines(string path, IEnumerable<string> lines)
         {
             var output = new HashSet<string>(lines, StringComparer.InvariantCultureIgnoreCase);
-
             using (TextWriter writer = File.CreateText(path))
             {
-                foreach (var line in output)
-                {
-                    writer.WriteLine(line);
-                }
+                foreach (var line in output) { writer.WriteLine(line); }
             }
+
             return true;
         }
 

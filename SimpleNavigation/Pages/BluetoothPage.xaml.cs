@@ -166,8 +166,10 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             }, cts1.Token).ContinueWith(ts =>
             {
                 Debug.WriteLine($"🡆 1st task has '{ts.Status}'");
+                // We should be on the main thread since we're specifying TaskScheduler.FromCurrentSynchronizationContext,
+                // but just in case we'll use the DispatcherQueue.TryEnqueue() callback here.
                 rootGrid.DispatcherQueue.TryEnqueue(() => { Status = $"1st search {ts.Status}"; });
-            });
+            }, TaskScheduler.FromCurrentSynchronizationContext());
             #endregion
 
             #region [long search]
@@ -237,8 +239,10 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             }, cts2.Token).ContinueWith(ts =>
             {
                 Debug.WriteLine($"🡆 2nd task has '{ts.Status}'");
+                // We should be on the main thread since we're specifying TaskScheduler.FromCurrentSynchronizationContext,
+                // but just in case we'll use the DispatcherQueue.TryEnqueue() callback here.
                 rootGrid.DispatcherQueue.TryEnqueue(() => { Status = $"2nd search {ts.Status}"; });
-            });
+            }, TaskScheduler.FromCurrentSynchronizationContext());
             #endregion
 
             #region [handle results]

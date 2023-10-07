@@ -45,6 +45,8 @@ public sealed partial class HomePage : Page
             await Task.Delay(500);
             var data = Extensions.GatherReferenceAssemblies(true);
             tbReferences.DispatcherQueue.TryEnqueue(() => { tbReferences.Text = $"{data}"; });
+
+            //await StoryboardPath.BeginAsync();
         });
 
         if (App.AnimationsEffectsEnabled)

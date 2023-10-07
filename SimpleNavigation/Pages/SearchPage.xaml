@@ -23,6 +23,30 @@
                 Header="Search Path"
                 Text="{x:Bind SearchPath, Mode=TwoWay}"
                 ToolTipService.ToolTip="The path to search" />
+            <Button
+                x:Name="FolderButton"
+                VerticalAlignment="Bottom"
+                Background="Transparent"
+                Click="FolderButton_Click"
+                ToolTipService.ToolTip="Select a folder">
+                <Button.Content>
+                    <Image
+                        Width="28"
+                        Height="23"
+                        Margin="-6,-1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Source="/Assets/Folder.png"
+                        Stretch="Uniform" />
+                    <!--
+                    <SymbolIcon
+                        Margin="-6,-1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Symbol="Folder" />
+                    -->
+                </Button.Content>
+            </Button>
             <TextBox
                 x:Name="MinSizeTextBox"
                 MinWidth="110"
@@ -78,7 +102,8 @@
             <ListView
                 ItemsSource="{x:Bind Items, Mode=OneWay}"
                 SelectionChanged="ListView_SelectionChanged"
-                SelectionMode="Multiple">
+                SelectionMode="Multiple"
+                Tapped="ListView_Tapped">
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="local:Item">
                         <StackPanel Orientation="Horizontal" ToolTipService.ToolTip="{x:Bind Content}">
