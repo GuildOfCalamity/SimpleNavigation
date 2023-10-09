@@ -46,12 +46,18 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     }
 
     ObservableCollection<Message> _msgs = new();
-    #endregion
+	#endregion
 
-    public MainPage()
+    /// <summary>
+    /// A keyboard event that another page/model can subscribe to.
+    /// </summary>
+	public static event EventHandler<KeyboardInput>? MainPageKeyboardEvent;
+
+	public MainPage()
     {
         this.InitializeComponent();
 
+		#region [Event Extras]
 		// We can setup keyboard events in a number of ways…
 		// 1) Add a generic handler event:
 		this.AddHandler(KeyDownEvent, new KeyEventHandler(PressedKey), true);
@@ -59,10 +65,94 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         this.ProcessKeyboardAccelerators += MainPage_ProcessKeyboardAccelerators;
         // 3) Build a keyboard accelerator:
         KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
+        // Also, pointer events:
+        this.AddHandler(PointerPressedEvent, new PointerEventHandler(PressedPointer), true);
 
-        this.Loaded += MainPage_Loaded;
+		/*  [Other Delegates] https://learn.microsoft.com/en-us/uwp/api/windows.ui.xaml.input?view=winrt-22621#delegates
+            DoubleTappedEventHandler 	                Represents the method that will handle the DoubleTapped event.
+            HoldingEventHandler 	                    Represents the method that will handle the Holding event.
+            KeyEventHandler 	                        Represents the method that handles the KeyUp and KeyDown  events.
+            ManipulationCompletedEventHandler 	        Represents the method that will handle ManipulationCompleted and related events.
+            ManipulationDeltaEventHandler 	            Represents the method that will handle ManipulationDelta and related events.
+            ManipulationInertiaStartingEventHandler 	Represents the method that will handle the ManipulationInertiaStarting event.
+            ManipulationStartedEventHandler 	        Represents the method that will handle ManipulationStarted and related events.
+            ManipulationStartingEventHandler 	        Represents the method that will handle the ManipulationStarting event.
+            PointerEventHandler 	                    Represents the method that will handle pointer message events such as PointerPressed.
+            RightTappedEventHandler                     Represents the method that will handle a RightTapped routed event.
+            TappedEventHandler 	                        Represents the method that will handle the Tapped event.
+         */
+
+		// [Hierarchy] Page => UserControl => Control => FrameworkElement => UIElement => DependencyObject
+
+		Extensions.DisplayRoutedEventsForFrameworkElement();
+
+		// When using this.AddHandler() these are the additional events you can use:
+
+		/** UIElement vs FrameworkElement Event Comparison **
+
+           [UIElement]                 |  [FrameworkElement]
+         ----------------------------------------------------------------
+           AccessKeyDisplayDismissed   |  ActualThemeChanged
+           AccessKeyDisplayRequested   |  DataContextChanged
+           AccessKeyInvoked            |  EffectiveViewportChanged
+           (n/a)                       |  LayoutUpdated
+           (n/a)                       |  Loaded
+           (n/a)                       |  Loading
+           (n/a)                       |  SizeChanged
+           (n/a)                       |  Unloaded
+           (n/a)                       |  AccessKeyDisplayDismissed
+           (n/a)                       |  AccessKeyDisplayRequested
+           (n/a)                       |  AccessKeyInvoked
+           BringIntoViewRequested      |  BringIntoViewRequested
+           CharacterReceived           |  CharacterReceived
+           ContextCanceled             |  ContextCanceled
+           ContextRequested            |  ContextRequested
+           DoubleTapped                |  DoubleTapped
+           DragEnter                   |  DragEnter
+           DragLeave                   |  DragLeave
+           DragOver                    |  DragOver
+           DragStarting                |  DragStarting
+           Drop                        |  Drop
+           DropCompleted               |  DropCompleted
+           GettingFocus                |  GettingFocus
+           GotFocus                    |  GotFocus
+           Holding                     |  Holding
+           KeyDown                     |  KeyDown
+           KeyUp                       |  KeyUp
+           LosingFocus                 |  LosingFocus
+           LostFocus                   |  LostFocus
+           ManipulationCompleted       |  ManipulationCompleted
+           ManipulationDelta           |  ManipulationDelta
+           ManipulationInertiaStarting |  ManipulationInertiaStarting
+           ManipulationStarted         |  ManipulationStarted
+           ManipulationStarting        |  ManipulationStarting
+           NoFocusCandidateFound       |  NoFocusCandidateFound
+           PointerCanceled             |  PointerCanceled
+           PointerCaptureLost          |  PointerCaptureLost
+           PointerEntered              |  PointerEntered
+           PointerExited               |  PointerExited
+           PointerMoved                |  PointerMoved
+           PointerPressed              |  PointerPressed
+           PointerReleased             |  PointerReleased
+           PointerWheelChanged         |  PointerWheelChanged
+           PreviewKeyDown              |  PreviewKeyDown
+           PreviewKeyUp                |  PreviewKeyUp
+           ProcessKeyboardAccelerators |  ProcessKeyboardAccelerators
+           RightTapped                 |  RightTapped
+           Tapped                      |  Tapped
+
+           The parent type, Microsoft.UI.Xaml.Controls.Control, exposes 3 additional events:
+            - FocusEngaged    
+            - FocusDisengaged 
+            - IsEnabledChanged
+
+		 **************************************************/
+		#endregion
+
+		this.Loaded += MainPage_Loaded;
 
         #region [Setup page-wide messaging]
+        // These are only used for the InfoBar control.
         HomePage.PostMessageEvent += MainPage_PostMessageEvent;
         ImagesPage.PostMessageEvent += MainPage_PostMessageEvent;
         NextPage.PostMessageEvent += MainPage_PostMessageEvent;
@@ -73,7 +163,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 		#endregion
 	}
 
-    void MainPage_PostMessageEvent(object? sender, Message msg) => ShowMessage(msg.Content, msg.Severity);
+	void MainPage_PostMessageEvent(object? sender, Message msg) => ShowMessage(msg.Content, msg.Severity);
 
     void MainPage_Loaded(object sender, RoutedEventArgs e)
     {
@@ -111,7 +201,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         {
             rootElement.RequestedTheme = theme;
             TitleBarHelper.UpdateTitleBar(theme);
-            // Flyout themes do not seem to update immeadiately like other child objects
+            // Flyout themes do not seem to update immediately like other child objects
             // bound to the root element, so we'll manually force the theme change here.
             SettingsPanel.RequestedTheme = theme;
         }
@@ -196,8 +286,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
         Debug.WriteLine($"Navigation stopped for page '{e.SourcePageType.FullName}'");
     }
-
-		#endregion
+    #endregion
 
 	#region [Control Events]
     async void HyperlinkButton_Click(object sender, RoutedEventArgs e)
@@ -236,14 +325,22 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             }
         }
     }
-    #endregion
+	#endregion
 
-    #region [Keyboard Events]
-    void PressedKey(object sender, KeyRoutedEventArgs e) => Debug.WriteLine($">> [{e.Key}] key was pressed <<");
+	#region [Pointer Events]
+	/// <summary>
+	/// You will not see this event fire if clicking on a transparent background area.
+	/// </summary>
+	void PressedPointer(object sender, PointerRoutedEventArgs e) => Debug.WriteLine($">> [{e.Pointer.PointerDeviceType}] was pressed <<");
+	#endregion
+
+	#region [Keyboard Events]
+	void PressedKey(object sender, KeyRoutedEventArgs e) => Debug.WriteLine($">> [{e.Key}] key was pressed <<");
 
     void MainPage_ProcessKeyboardAccelerators(UIElement sender, ProcessKeyboardAcceleratorEventArgs args)
     {
         Debug.WriteLine($"[ProcessKeyboardAccelerators] {args.Modifiers} {args.Key}");
+
         if (args.Key == VirtualKey.B && (args.Modifiers == VirtualKeyModifiers.Menu || args.Modifiers == VirtualKeyModifiers.Control))
         {
             if (MainFrame.CanGoBack)
@@ -260,7 +357,15 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
             args.Handled = true;
         }
-    }
+
+		// Fire our custom event for any listeners.
+        MainPageKeyboardEvent?.Invoke(this, new KeyboardInput
+		{
+            virtualKey = args.Key,
+            virtualKeyModifiers = args.Modifiers,
+            handled = args.Handled
+		});
+	}
 
     KeyboardAccelerator BuildKeyboardAccelerator(VirtualKey key, VirtualKeyModifiers? modifiers = null)
     {

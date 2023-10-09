@@ -351,6 +351,15 @@ public partial class App : Application
     public static Version GetCurrentAssemblyVersion()
     {
         return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version();
+	}
+
+    public static void ShowHierarchy(Type type)
+    {
+		Debug.WriteLine($"[Contained elements]");
+		foreach (var element in type.GetHierarchyFromUIElement())
+        {
+            Debug.WriteLine($" - {element.FullName}");
+        }
     }
     #endregion
 }

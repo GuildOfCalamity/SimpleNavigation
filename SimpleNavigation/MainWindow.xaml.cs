@@ -32,7 +32,7 @@ namespace SimpleNavigation
         public MainWindow()
         {
             this.InitializeComponent();
-            this.ExtendsContentIntoTitleBar = true;
+			this.ExtendsContentIntoTitleBar = true;
             this.SetTitleBar(AppTitleBar);
             this.Title = AssemblyHelper.GetAssemblyName();
             ((FrameworkElement)this.Content).ActualThemeChanged += Window_ThemeChanged;

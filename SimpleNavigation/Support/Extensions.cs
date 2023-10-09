@@ -63,10 +63,117 @@ namespace SimpleNavigation
             }
             return null;
         }
-        #endregion
 
-        #region [Window Tracking]
-        static private List<Window> _activeWindows = new List<Window>();
+		public static IEnumerable<Type> GetHierarchyFromUIElement(this Type element)
+		{
+			if (element.GetTypeInfo().IsSubclassOf(typeof(UIElement)) != true)
+			{
+				yield break;
+			}
+
+			Type current = element;
+
+			while (current != null && current != typeof(UIElement))
+			{
+				yield return current;
+				current = current.GetTypeInfo().BaseType;
+			}
+		}
+
+		public static void DisplayRoutedEventsForUIElement()
+		{
+			Type uiElementType = typeof(UIElement);
+			var routedEvents = uiElementType.GetEvents();
+			Debug.WriteLine($"[All RoutedEvents for UIElement]");
+			foreach (var routedEvent in routedEvents)
+			{
+				if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
+					routedEvent.EventHandlerType == typeof(RoutedEvent) ||
+					routedEvent.EventHandlerType == typeof(EventHandler))
+				{
+					Debug.WriteLine($" - '{routedEvent.Name}'");
+				}
+                else if (routedEvent.MemberType == MemberTypes.Event)
+                {
+					Debug.WriteLine($" - '{routedEvent.Name}'");
+				}
+			}
+		}
+
+		public static void DisplayRoutedEventsForFrameworkElement()
+		{
+			Type fwElementType = typeof(FrameworkElement);
+			var routedEvents = fwElementType.GetEvents();
+			Debug.WriteLine($"[All RoutedEvents for FrameworkElement]");
+			foreach (var routedEvent in routedEvents)
+			{
+				if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
+					routedEvent.EventHandlerType == typeof(RoutedEvent) ||
+					routedEvent.EventHandlerType == typeof(EventHandler))
+				{
+					Debug.WriteLine($" - '{routedEvent.Name}'");
+				}
+				else if (routedEvent.MemberType == MemberTypes.Event)
+				{
+					Debug.WriteLine($" - '{routedEvent.Name}'");
+				}
+			}
+		}
+
+		public static void DisplayRoutedEventsForControl()
+		{
+			Type ctlElementType = typeof(Microsoft.UI.Xaml.Controls.Control);
+			var routedEvents = ctlElementType.GetEvents();
+			Debug.WriteLine($"[All RoutedEvents for Control]");
+			foreach (var routedEvent in routedEvents)
+			{
+				if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
+					routedEvent.EventHandlerType == typeof(RoutedEvent) ||
+					routedEvent.EventHandlerType == typeof(EventHandler))
+				{
+					Debug.WriteLine($" - '{routedEvent.Name}'");
+				}
+				else if (routedEvent.MemberType == MemberTypes.Event)
+				{
+					Debug.WriteLine($" - '{routedEvent.Name}'");
+				}
+			}
+		}
+
+		/// <summary>
+		/// I created this to show what controls are members of <see cref="Microsoft.UI.Xaml.FrameworkElement"/>.
+		/// </summary>
+		public static void FindControlsInheritingFromFrameworkElement()
+		{
+			var controlAssembly = typeof(Microsoft.UI.Xaml.Controls.Control).GetTypeInfo().Assembly;
+			var controlTypes = controlAssembly.GetTypes()
+				.Where(type => type.Namespace == "Microsoft.UI.Xaml.Controls" &&
+				typeof(Microsoft.UI.Xaml.FrameworkElement).IsAssignableFrom(type));
+
+			foreach (var controlType in controlTypes)
+			{
+				Debug.WriteLine($"[FrameworkElement] {controlType.FullName}");
+			}
+		}
+
+		/// <summary>
+		/// Returns the field names and their types for a specific class.
+		/// </summary>
+		/// <param name="myType"></param>
+		/// <example>
+		/// var dict = ReflectFieldInfo(typeof(MainPage));
+		/// </example>
+		public static Dictionary<string, Type> ReflectFieldInfo(Type myType)
+		{
+			Dictionary<string, Type> results = new();
+			FieldInfo[] myFieldInfo = myType.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+			for (int i = 0; i < myFieldInfo.Length; i++) { results[myFieldInfo[i].Name] = myFieldInfo[i].FieldType; }
+			return results;
+		}
+		#endregion
+
+		#region [Window Tracking]
+		static private List<Window> _activeWindows = new List<Window>();
         /// <summary>
         /// From inside a Page or Control: var window = Extensions.GetWindowForElement(this);
         /// </summary>
@@ -859,23 +966,6 @@ namespace SimpleNavigation
         public static Windows.Foundation.Point CoordinatesTo(this UIElement parent, UIElement target)
         {
             return target.TransformToVisual(parent).TransformPoint(default(Windows.Foundation.Point));
-        }
-
-
-        /// <summary>
-        /// I created this to show what controls are members of <see cref="Microsoft.UI.Xaml.FrameworkElement"/>.
-        /// </summary>
-        public static void FindControlsInheritingFromFrameworkElement()
-        {
-            var controlAssembly = typeof(Microsoft.UI.Xaml.Controls.Control).GetTypeInfo().Assembly;
-            var controlTypes = controlAssembly.GetTypes()
-                .Where(type => type.Namespace == "Microsoft.UI.Xaml.Controls" &&
-                typeof(Microsoft.UI.Xaml.FrameworkElement).IsAssignableFrom(type));
-
-            foreach (var controlType in controlTypes)
-            {
-                Debug.WriteLine($"[FrameworkElement] {controlType.FullName}", $"ControlInheritingFrom");
-            }
         }
 
         /// <summary>
