@@ -61,6 +61,24 @@ public sealed partial class SettingsPage : Page
         Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.DeclaringType?.Name}__{MethodBase.GetCurrentMethod()?.Name} [{DateTime.Now.ToString("hh:mm:ss.fff tt")}]");
         this.InitializeComponent();
         PopulateTree();
+        this.Loaded += SettingsPage_Loaded;
+    }
+
+    void SettingsPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        tbReferences.Text = string.Empty;
+        Task.Run(async () =>
+        {
+            await Task.Delay(500);
+            var data = Extensions.GatherReferenceAssemblies(true);
+            tbReferences.DispatcherQueue.TryEnqueue(() => { tbReferences.Text = $"{data}"; });
+            //await StoryboardPath.BeginAsync();
+        });
+
+        if (App.AnimationsEffectsEnabled)
+            StoryboardPath.Begin();
+
+        Debug.WriteLine($"Requested theme is '{App.ThemeRequested}'");
     }
 
     /// <summary>

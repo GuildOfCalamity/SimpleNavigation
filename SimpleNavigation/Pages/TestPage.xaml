@@ -138,10 +138,10 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!--  Notice Dialog  -->
+        <!--  Popup Dialog  -->
         <ContentDialog
             x:Name="NoticeDialog"
-            Background="{Binding Severity, Mode=OneWay, Converter={StaticResource LevelToBrush}, ConverterParameter=220}"
+            Background="{Binding Severity, Mode=OneWay, Converter={StaticResource LevelToBackground}, ConverterParameter=240}"
             CloseButtonText="Cancel"
             PrimaryButtonText="Update">
             <RelativePanel MinWidth="550" HorizontalAlignment="Stretch">

@@ -33,24 +33,7 @@ public sealed partial class HomePage : Page
     {
         Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.DeclaringType?.Name}__{MethodBase.GetCurrentMethod()?.Name} [{DateTime.Now.ToString("hh:mm:ss.fff tt")}]");
         this.InitializeComponent();
-        this.Loaded += HomePage_Loaded;
         url.Text = "For more WinUI3 examples be sure to visit my github at https://github.com/GuildOfCalamity?tab=repositories";
-    }
-
-    void HomePage_Loaded(object sender, RoutedEventArgs e)
-    {
-        tbReferences.Text = string.Empty;
-        Task.Run(async () =>
-        {
-            await Task.Delay(500);
-            var data = Extensions.GatherReferenceAssemblies(true);
-            tbReferences.DispatcherQueue.TryEnqueue(() => { tbReferences.Text = $"{data}"; });
-
-            //await StoryboardPath.BeginAsync();
-        });
-
-        if (App.AnimationsEffectsEnabled)
-            StoryboardPath.Begin();
     }
 
     /// <summary>

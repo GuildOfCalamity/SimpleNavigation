@@ -36,6 +36,8 @@ namespace SimpleNavigation
             this.SetTitleBar(AppTitleBar);
             this.Title = AssemblyHelper.GetAssemblyName();
             ((FrameworkElement)this.Content).ActualThemeChanged += Window_ThemeChanged;
+            ((FrameworkElement)this.Content).Loaded += Window_Loaded;
+            ((FrameworkElement)this.Content).Unloaded += Window_Unloaded;
 
             #region [SystemBackdrop was added starting with WinAppSDK 1.3.230502+]
             if (Extensions.IsWindows11OrGreater())
@@ -44,6 +46,7 @@ namespace SimpleNavigation
             {
                 // Default acrylic
                 SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
+
                 #region [Thick/Thin Acrylic]
                 // Hooking up the policy object.
                 m_configurationSource = new Microsoft.UI.Composition.SystemBackdrops.SystemBackdropConfiguration();
@@ -59,9 +62,13 @@ namespace SimpleNavigation
 
         void Window_Activated(object sender, WindowActivatedEventArgs args)
         {
-            Debug.WriteLine($"{nameof(MainWindow)} activated at {DateTime.Now.ToString("hh:mm:ss.fff tt")}");
+            Debug.WriteLine($"{nameof(MainWindow)} activated: {args.WindowActivationState}");
+            #region [Thick/Thin Acrylic]
             if (m_configurationSource != null)
+            {
                 m_configurationSource.IsInputActive = args.WindowActivationState != WindowActivationState.Deactivated;
+            }
+            #endregion
         }
 
         void Window_VisibilityChanged(object sender, WindowVisibilityChangedEventArgs args)
@@ -72,17 +79,30 @@ namespace SimpleNavigation
         void Window_Closed(object sender, WindowEventArgs args)
         {
             Debug.WriteLine($"{nameof(MainWindow)} closed at {DateTime.Now.ToString("hh:mm:ss.fff tt")}");
+            #region [Thick/Thin Acrylic]
             if (m_acrylicController != null)
             {
                 m_acrylicController.Dispose();
                 m_acrylicController = null;
             }
+            #endregion
+        }
+
+        void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine($"{nameof(MainWindow)} loaded at {DateTime.Now.ToString("hh:mm:ss:fff tt")}");
+        }
+
+        void Window_Unloaded(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine($"{nameof(MainWindow)} unloaded at {DateTime.Now.ToString("hh:mm:ss:fff tt")}");
         }
 
         void Window_ThemeChanged(FrameworkElement sender, object args) => SetConfigurationSourceTheme();
 
         void SetConfigurationSourceTheme()
         {
+            #region [Thick/Thin Acrylic]
             if (m_configurationSource == null)
                 return;
 
@@ -98,6 +118,7 @@ namespace SimpleNavigation
                     m_configurationSource.Theme = Microsoft.UI.Composition.SystemBackdrops.SystemBackdropTheme.Default;
                     break;
             }
+            #endregion
         }
     }
 }

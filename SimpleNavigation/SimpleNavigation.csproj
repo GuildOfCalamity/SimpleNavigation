@@ -16,14 +16,8 @@
       Only icon formatted images are allowed for this property. 
     -->
     <ApplicationIcon>Assets/Win10Logo.ico</ApplicationIcon>
-    <!-- 
-      WindowsPackageType defines whether your app is packaged (MSIX) or unpackaged (None) 
-    -->
-      <WindowsPackageType>None</WindowsPackageType>
-      <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
 
     <!-- ** Extras (https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props) ** -->
-
     <!--
     The RollForward property controls how the application chooses a runtime when multiple runtime versions 
     are available. This value is output to the RepoBackup.runtimeconfig.json as the "rollForward" setting.
@@ -56,7 +50,16 @@
       <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
-  <!-- 
+  <PropertyGroup Condition="'$(IsMsixPackage)'!='true'">
+    <!-- 
+      WindowsPackageType defines whether your app is packaged (MSIX) or unpackaged (None) 
+    -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+   <!-- 
 	 Define "IS_UNPACKAGED" constant if the app is an unpackaged app. 
    -->
   <PropertyGroup Condition="'$(WindowsPackageType)' == 'None'">

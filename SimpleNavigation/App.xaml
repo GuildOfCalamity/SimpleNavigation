@@ -13,6 +13,7 @@
                 <ResourceDictionary>
 
                     <local:LevelToBrushConverter x:Key="LevelToBrush" />
+                    <local:LevelToBackgroundConverter x:Key="LevelToBackground" />
                     <local:ValueToVisibilityConverter x:Key="ValueToVisibility" />
                     <local:ValueToEnabledConverter x:Key="ValueToEnabled" />
                     <local:StringFormatConverter x:Key="StringToFormat" />

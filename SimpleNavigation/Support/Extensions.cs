@@ -116,6 +116,29 @@ namespace SimpleNavigation
         }
         #endregion
 
+        public static async Task<ulong> GetFolderSize(this Windows.Storage.StorageFolder folder)
+        {
+            ulong res = 0;
+            foreach (StorageFile file in await folder.GetFilesAsync())
+            {
+                Windows.Storage.FileProperties.BasicProperties properties = await file.GetBasicPropertiesAsync();
+                res += properties.Size;
+            }
+
+            foreach (Windows.Storage.StorageFolder subFolder in await folder.GetFoldersAsync())
+            {
+                try
+                {
+                    res += await GetFolderSize(subFolder);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"GetFolderSize: {ex.Message}", $"{nameof(Extensions)}");
+                }
+            }
+            return res;
+        }
+
         /// <summary>
         /// Fetch all <see cref="ProcessModule"/>s in the current running process.
         /// </summary>

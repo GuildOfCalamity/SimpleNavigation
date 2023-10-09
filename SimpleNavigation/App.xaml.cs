@@ -31,7 +31,7 @@ namespace SimpleNavigation;
 /// </summary>
 public partial class App : Application
 {
-    private Window _window;
+    private Window? _window;
     private static UISettings _UISettings = new UISettings();
     public static Window? MainWindow { get; set; }
     public static SystemState? State { get; set; }
@@ -47,6 +47,10 @@ public partial class App : Application
     public static bool AnimationsEffectsEnabled
     {
         get => _UISettings.AnimationsEnabled;
+    }
+    public static ElementTheme ThemeRequested
+    {
+        get => (ElementTheme)Enum.Parse(typeof(ElementTheme), Application.Current.RequestedTheme.ToString());
     }
 
     /// <summary>
