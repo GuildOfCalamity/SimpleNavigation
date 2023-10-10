@@ -361,5 +361,23 @@ public partial class App : Application
             Debug.WriteLine($" - {element.FullName}");
         }
     }
+
+    public static string GetLocalFolder()
+    {
+        string path = string.Empty;
+
+        if (App.IsPackaged)
+        {
+            //Windows.Storage.ApplicationDataContainer localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
+            Windows.Storage.StorageFolder localFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
+            path = localFolder.Path;
+        }
+        else
+        {
+            path = Directory.GetCurrentDirectory();
+        }
+
+        return path;
+    }
     #endregion
 }

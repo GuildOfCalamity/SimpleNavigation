@@ -221,9 +221,25 @@ namespace SimpleNavigation
                 default: return InfoBarSeverity.Informational;
             }
         }
-        #endregion
 
-        public static async Task<ulong> GetFolderSize(this Windows.Storage.StorageFolder folder)
+		public static bool CheckForCorruptData(List<byte> data)
+		{
+            if (data.Count == 0)
+                return false;
+
+			bool stxPresent = data.First() == 0x02;
+			bool etxPresent = data.Last() == 0x03;
+			bool anyOtherDataPresent = data.Distinct().Where(p => p != 0x00 && p != 0xFF).Count() > 0;
+			if (!stxPresent && !etxPresent && !anyOtherDataPresent)
+			{
+				Debug.WriteLine("Corrupt data detected.");
+                return true;
+			}
+            return false;
+		}
+		#endregion
+
+		public static async Task<ulong> GetFolderSize(this Windows.Storage.StorageFolder folder)
         {
             ulong res = 0;
             foreach (StorageFile file in await folder.GetFilesAsync())
@@ -244,6 +260,32 @@ namespace SimpleNavigation
                 }
             }
             return res;
+        }
+
+        public static async Task<byte[]?> ReadBytesAsync(this Windows.Storage.StorageFile file)
+        {
+            if (file != null)
+            {
+                using IRandomAccessStream stream = await file.OpenReadAsync();
+                using var reader = new Windows.Storage.Streams.DataReader(stream.GetInputStreamAt(0));
+                await reader.LoadAsync((uint)stream.Size);
+                var bytes = new byte[stream.Size];
+                reader.ReadBytes(bytes);
+                return bytes;
+            }
+            return null;
+        }
+
+        public static async Task<byte[]?> ReadBytesAsync(this Windows.Storage.StorageFolder folder, string fileName)
+        {
+            var item = await folder.TryGetItemAsync(fileName).AsTask().ConfigureAwait(false);
+            if ((item != null) && item.IsOfType(Windows.Storage.StorageItemTypes.File))
+            {
+                var storageFile = await folder.GetFileAsync(fileName);
+                var content = await storageFile.ReadBytesAsync();
+                return content;
+            }
+            return null;
         }
 
         /// <summary>

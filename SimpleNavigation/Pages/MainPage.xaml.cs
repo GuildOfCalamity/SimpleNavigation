@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -17,8 +18,8 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+
 using Windows.System;
-using static System.Collections.Specialized.BitVector32;
 
 namespace SimpleNavigation;
 
@@ -159,11 +160,12 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         SearchPage.PostMessageEvent += MainPage_PostMessageEvent;
         SettingsPage.PostMessageEvent += MainPage_PostMessageEvent;
         TestPage.PostMessageEvent += MainPage_PostMessageEvent;
+        LaunchPage.PostMessageEvent += MainPage_PostMessageEvent;
         BluetoothPage.PostMessageEvent += MainPage_PostMessageEvent;
-		#endregion
-	}
+        #endregion
+    }
 
-	void MainPage_PostMessageEvent(object? sender, Message msg) => ShowMessage(msg.Content, msg.Severity);
+    void MainPage_PostMessageEvent(object? sender, Message msg) => ShowMessage(msg.Content, msg.Severity);
 
     void MainPage_Loaded(object sender, RoutedEventArgs e)
     {
@@ -247,6 +249,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         catch (Exception ex)
         {
             Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.Name}: {ex.Message}");
+            App.ShowMessageBox("Navigation", $"Failed to load page '{((RadioButton)sender).Tag}'", "OK", "Cancel", null, null);
         }
     }
 

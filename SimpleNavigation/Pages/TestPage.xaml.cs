@@ -13,6 +13,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace SimpleNavigation;
 
@@ -182,6 +183,14 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
         if (ctrl != null)
         {
             var msg = ctrl.DataContext as Message;
+
+            if (msg != null)
+            {
+                // Copy message text to clipboard.
+                DataPackage dataPackage = new DataPackage();
+                dataPackage.SetText(msg.Content);
+                Clipboard.SetContent(dataPackage);
+            }
 
             #region [Extract object using NoticeDialog's DataContext]
             //await Task.Run(async () =>
