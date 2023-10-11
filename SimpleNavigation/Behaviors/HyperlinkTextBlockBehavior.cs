@@ -57,7 +57,6 @@ public class HyperlinkTextBlockBehavior : Behavior<TextBlock>
                 AssociatedObject.Inlines.Add(new Run() { Text = left_text });
                 AssociatedObject.Inlines.Add(new Hyperlink()
                 {
-                    //Foreground = this.Foreground,
                     NavigateUri = new Uri(match.Value),
                     Inlines = { new Run() { Text = match.Value } }
                 });

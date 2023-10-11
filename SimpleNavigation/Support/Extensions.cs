@@ -358,6 +358,21 @@ namespace SimpleNavigation
             return str.Any(x => char.IsSeparator(x));
         }
 
+        public static void CopyEmbeddedResourceToFile(this Assembly assembly, string embeddedResourcesPath, string folder, string resourceName)
+        {
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            using var image = assembly.GetManifestResourceStream(embeddedResourcesPath + resourceName);
+            if (image == null)
+                throw new ArgumentException("EmbeddedResource not found");
+            var destPath = Path.Combine(folder, resourceName);
+            using var dest = File.Create(destPath);
+            image.CopyTo(dest);
+        }
+
         /// <summary>
         /// Helper method that can be used to compare if two dictionaries are equal.
         /// This method uses SequenceEqual to compare the keys and values of the two dictionaries.

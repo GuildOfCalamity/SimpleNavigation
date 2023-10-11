@@ -11,9 +11,11 @@ using System.Threading.Tasks;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
+using Windows.UI.Core;
 
 namespace SimpleNavigation;
 
@@ -116,6 +118,8 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
         {
             Items.Clear();
             await Task.Delay(1000);
+
+            // We'll start two searches in parallel and update the UI accordingly.
 
             #region [short search]
             CancellationTokenSource cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -333,7 +337,8 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
 	}
 
     /// <summary>
-    /// Our short BT search task.
+    /// Our short BluetoothLE search task.
+    /// You could also use the <see cref="DeviceInformation.CreateWatcher()"/> to monitor for nearby devices.
     /// </summary>
     /// <returns><see cref="DeviceInformationCollection"/></returns>
     public async Task<DeviceInformationCollection?> GatherBasic()
@@ -351,7 +356,8 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Our long BT search task.
+    /// Our long BluetoothLE search task.
+    /// You could also use the <see cref="DeviceInformation.CreateWatcher()"/> to monitor for nearby devices.
     /// </summary>
     /// <returns><see cref="DeviceInformationCollection"/></returns>
     public async Task<DeviceInformationCollection?> GatherModerate()
@@ -368,4 +374,262 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             return null; 
         }
     }
+
+
+    #region [Device discovery from UWP using a Watcher]
+    private ObservableCollection<BluetoothLEDeviceDisplay> KnownDevices = new ObservableCollection<BluetoothLEDeviceDisplay>();
+    private List<DeviceInformation> UnknownDevices = new List<DeviceInformation>();
+    private DeviceWatcher? deviceWatcher;
+
+    /// <summary>
+    /// Starts a device watcher that looks for all nearby Bluetooth devices (paired or unpaired). 
+    /// Attaches event handlers to populate the device collection.
+    /// </summary>
+    private void StartBleDeviceWatcher()
+    {
+        // Additional properties we would like about the device.
+        // Property strings are documented here https://msdn.microsoft.com/en-us/library/windows/desktop/ff521659(v=vs.85).aspx
+        string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected", "System.Devices.Aep.Bluetooth.Le.IsConnectable" };
+
+        // BT_Code: Example showing paired and non-paired in a single query.
+        string aqsAllBluetoothLEDevices = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")";
+
+        deviceWatcher = DeviceInformation.CreateWatcher(
+                    aqsAllBluetoothLEDevices,
+                    requestedProperties,
+                    DeviceInformationKind.AssociationEndpoint);
+
+        // Register event handlers before starting the watcher.
+        deviceWatcher.Added += DeviceWatcher_Added;
+        deviceWatcher.Updated += DeviceWatcher_Updated;
+        deviceWatcher.Removed += DeviceWatcher_Removed;
+        deviceWatcher.EnumerationCompleted += DeviceWatcher_EnumerationCompleted;
+        deviceWatcher.Stopped += DeviceWatcher_Stopped;
+
+        // Start over with an empty collection.
+        KnownDevices.Clear();
+
+        // Start the watcher. Active enumeration is limited to approximately 30 seconds.
+        // This limits power usage and reduces interference with other Bluetooth activities.
+        // To monitor for the presence of Bluetooth LE devices for an extended period,
+        // use the BluetoothLEAdvertisementWatcher runtime class. See the BluetoothAdvertisement
+        // sample for an example.
+        deviceWatcher.Start();
+    }
+
+    /// <summary>
+    /// Stops watching for all nearby Bluetooth devices.
+    /// </summary>
+    void StopBleDeviceWatcher()
+    {
+        if (deviceWatcher != null)
+        {
+            // Unregister the event handlers.
+            deviceWatcher.Added -= DeviceWatcher_Added;
+            deviceWatcher.Updated -= DeviceWatcher_Updated;
+            deviceWatcher.Removed -= DeviceWatcher_Removed;
+            deviceWatcher.EnumerationCompleted -= DeviceWatcher_EnumerationCompleted;
+            deviceWatcher.Stopped -= DeviceWatcher_Stopped;
+
+            // Stop the watcher.
+            deviceWatcher.Stop();
+            deviceWatcher = null;
+        }
+    }
+
+    BluetoothLEDeviceDisplay? FindBluetoothLEDeviceDisplay(string id)
+    {
+        foreach (BluetoothLEDeviceDisplay bleDeviceDisplay in KnownDevices)
+        {
+            if (bleDeviceDisplay.Id == id)
+            {
+                return bleDeviceDisplay;
+            }
+        }
+        return null;
+    }
+
+    DeviceInformation? FindUnknownDevices(string id)
+    {
+        foreach (DeviceInformation bleDeviceInfo in UnknownDevices)
+        {
+            if (bleDeviceInfo.Id == id)
+            {
+                return bleDeviceInfo;
+            }
+        }
+        return null;
+    }
+
+    async void DeviceWatcher_Added(DeviceWatcher sender, DeviceInformation deviceInfo)
+    {
+        // We must update the collection on the UI thread because the collection is databound to a UI element.
+        await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+        {
+            lock (this)
+            {
+                Debug.WriteLine($"Added {deviceInfo.Id}{deviceInfo.Name}");
+
+                // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+                if (sender == deviceWatcher)
+                {
+                    // Make sure device isn't already present in the list.
+                    if (FindBluetoothLEDeviceDisplay(deviceInfo.Id) == null)
+                    {
+                        if (deviceInfo.Name != string.Empty)
+                        {
+                            // If device has a friendly name display it immediately.
+                            KnownDevices.Add(new BluetoothLEDeviceDisplay(deviceInfo));
+                        }
+                        else
+                        {
+                            // Add it to a list in case the name gets updated later. 
+                            UnknownDevices.Add(deviceInfo);
+                        }
+                    }
+
+                }
+            }
+        });
+    }
+
+    async void DeviceWatcher_Updated(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
+    {
+        // We must update the collection on the UI thread because the collection is databound to a UI element.
+        await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+        {
+            lock (this)
+            {
+                Debug.WriteLine($"Updated {deviceInfoUpdate.Id} {deviceInfoUpdate.Kind}");
+
+                // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+                if (sender == deviceWatcher)
+                {
+                    BluetoothLEDeviceDisplay bleDeviceDisplay = FindBluetoothLEDeviceDisplay(deviceInfoUpdate.Id);
+                    if (bleDeviceDisplay != null)
+                    {
+                        // Device is already being displayed - update UX.
+                        bleDeviceDisplay.Update(deviceInfoUpdate);
+                        return;
+                    }
+
+                    DeviceInformation deviceInfo = FindUnknownDevices(deviceInfoUpdate.Id);
+                    if (deviceInfo != null)
+                    {
+                        deviceInfo.Update(deviceInfoUpdate);
+                        // If device has been updated with a friendly name it's no longer unknown.
+                        if (deviceInfo.Name != String.Empty)
+                        {
+                            KnownDevices.Add(new BluetoothLEDeviceDisplay(deviceInfo));
+                            UnknownDevices.Remove(deviceInfo);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    async void DeviceWatcher_Removed(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
+    {
+        // We must update the collection on the UI thread because the collection is databound to a UI element.
+        await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+        {
+            lock (this)
+            {
+                Debug.WriteLine($"Removed {deviceInfoUpdate.Id} {deviceInfoUpdate.Kind}");
+
+                // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+                if (sender == deviceWatcher)
+                {
+                    // Find the corresponding DeviceInformation in the collection and remove it.
+                    BluetoothLEDeviceDisplay? bleDeviceDisplay = FindBluetoothLEDeviceDisplay(deviceInfoUpdate.Id);
+                    if (bleDeviceDisplay != null)
+                    {
+                        KnownDevices.Remove(bleDeviceDisplay);
+                    }
+
+                    DeviceInformation? deviceInfo = FindUnknownDevices(deviceInfoUpdate.Id);
+                    if (deviceInfo != null)
+                    {
+                        UnknownDevices.Remove(deviceInfo);
+                    }
+                }
+            }
+        });
+    }
+
+    async void DeviceWatcher_EnumerationCompleted(DeviceWatcher sender, object e)
+    {
+        // We must update the collection on the UI thread because the collection is databound to a UI element.
+        await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+        {
+            // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+            if (sender == deviceWatcher)
+            {
+                Debug.WriteLine($"{KnownDevices.Count} devices found. Enumeration completed.");
+            }
+        });
+    }
+
+    async void DeviceWatcher_Stopped(DeviceWatcher sender, object e)
+    {
+        // We must update the collection on the UI thread because the collection is databound to a UI element.
+        await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+        {
+            // Protect against race condition if the task runs after the app stopped the deviceWatcher.
+            if (sender == deviceWatcher)
+            {
+                Debug.WriteLine($"No longer watching for devices: {sender.Status}");
+            }
+        });
+    }
+    #endregion
+}
+
+/// <summary>
+/// Display class used to represent a BluetoothLEDevice in the device list.
+/// </summary>
+public class BluetoothLEDeviceDisplay : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler PropertyChanged;
+    protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    public DeviceInformation DeviceInformation { get; private set; }
+    public string Id => DeviceInformation.Id;
+    public string Name => DeviceInformation.Name;
+    public bool IsPaired => DeviceInformation.Pairing.IsPaired;
+    public bool IsConnected => (bool?)DeviceInformation.Properties["System.Devices.Aep.IsConnected"] == true;
+    public bool IsConnectable => (bool?)DeviceInformation.Properties["System.Devices.Aep.Bluetooth.Le.IsConnectable"] == true;
+    public IReadOnlyDictionary<string, object> Properties => DeviceInformation.Properties;
+    public BitmapImage GlyphBitmapImage { get; private set; }
+
+    public BluetoothLEDeviceDisplay(DeviceInformation deviceInfoIn)
+    {
+        DeviceInformation = deviceInfoIn;
+        UpdateGlyphBitmapImage();
+    }
+
+    public void Update(DeviceInformationUpdate deviceInfoUpdate)
+    {
+        DeviceInformation.Update(deviceInfoUpdate);
+
+        OnPropertyChanged("Id");
+        OnPropertyChanged("Name");
+        OnPropertyChanged("DeviceInformation");
+        OnPropertyChanged("IsPaired");
+        OnPropertyChanged("IsConnected");
+        OnPropertyChanged("Properties");
+        OnPropertyChanged("IsConnectable");
+
+        UpdateGlyphBitmapImage();
+    }
+
+    private async void UpdateGlyphBitmapImage()
+    {
+        DeviceThumbnail deviceThumbnail = await DeviceInformation.GetGlyphThumbnailAsync();
+        var glyphBitmapImage = new BitmapImage();
+        await glyphBitmapImage.SetSourceAsync(deviceThumbnail);
+        GlyphBitmapImage = glyphBitmapImage;
+        OnPropertyChanged("GlyphBitmapImage");
+    }
+
 }

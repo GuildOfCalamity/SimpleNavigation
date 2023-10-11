@@ -23,10 +23,7 @@ public sealed partial class NextPage : Page
     {
         Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.DeclaringType?.Name}__{MethodBase.GetCurrentMethod()?.Name} [{DateTime.Now.ToString("hh:mm:ss.fff tt")}]");
         this.InitializeComponent();
-        this.Loaded += (_, _) =>
-        {
-            ttAutoSuggest.IsOpen = true;
-        };
+        this.Loaded += (_, _) => { ttAutoSuggest.IsOpen = true; };
         #region [Config behavior using code-behind instead of XAML]
         //var behaviors = Microsoft.Xaml.Interactivity.Interaction.GetBehaviors(asbName);
         //var userStoppedTyping = new Behaviors.TypingPauseBehavior { MinimumDelay = 500, MinimumCharacters = 1 };

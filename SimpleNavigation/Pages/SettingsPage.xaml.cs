@@ -54,6 +54,18 @@ public sealed partial class SettingsPage : Page
         get { return (bool)GetValue(IsOptionCheckedProperty); }
         set { SetValue(IsOptionCheckedProperty, value); }
     }
+
+    // A basic IsChecked property.
+    public static readonly DependencyProperty LocalConfigProperty = DependencyProperty.Register(
+        nameof(LocalConfig),
+        typeof(Config),
+        typeof(SettingsPage),
+        new PropertyMetadata(null, OnLocalConfigChanged));
+    public Config? LocalConfig
+    {
+        get { return (Config)GetValue(LocalConfigProperty); }
+        set { SetValue(LocalConfigProperty, value); }
+    }
     #endregion
 
     public SettingsPage()
@@ -77,6 +89,27 @@ public sealed partial class SettingsPage : Page
 
         if (App.AnimationsEffectsEnabled)
             StoryboardPath.Begin();
+
+        if (ConfigHelper.DoesConfigExist())
+        {
+            tbConfig.DispatcherQueue.TryEnqueue(async () =>
+            {
+                try
+                {
+                    LocalConfig = await ConfigHelper.LoadConfig();
+                }
+                catch (Exception)
+                {
+                    LocalConfig = new Config
+                    {
+                        firstRun = true,
+                        theme = $"{App.ThemeRequested}",
+                        version = $"{App.GetCurrentAssemblyVersion()}",
+                        time = DateTime.Now,
+                    };
+                }
+            });
+        }
 
         Debug.WriteLine($"Requested theme is '{App.ThemeRequested}'");
     }
@@ -160,6 +193,15 @@ public sealed partial class SettingsPage : Page
             }
         }
     }
+
+    static void OnLocalConfigChanged(DependencyObject d, DependencyPropertyChangedEventArgs args)
+    {
+        // Call the non-static version of this method so that we can
+        // work with any local instanced variables. This is due to the
+        // fact that Dependency callbacks can only be static.
+        ((SettingsPage)d).LocalConfigChanged((Config)args.NewValue);
+    }
+    void LocalConfigChanged(Config val) => landing.Text = $"Config Changed: {val.theme}";
     #endregion
 
     #region [Helper Methods]
@@ -223,4 +265,53 @@ public sealed partial class SettingsPage : Page
         sampleTreeView.RootNodes.Add(rootNode);
     }
     #endregion
+
+    async void SaveConfig_Click(object sender, RoutedEventArgs e)
+    {
+        var result = await ConfigHelper.SaveConfig(new Config
+        { 
+            firstRun = Random.Shared.Next(0,2) == 1 ? true : false,
+            theme = $"{((Button)sender).ActualTheme}",
+            version = $"{App.GetCurrentAssemblyVersion()}", 
+            time = DateTime.Now,
+        }, true);
+
+        if (result)
+        {
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"Config data saved.",
+                Severity = InfoBarSeverity.Success,
+            });
+        }
+        else
+        {
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"Failed to save config.",
+                Severity = InfoBarSeverity.Warning,
+            });
+        }
+    }
+
+    async void LoadConfig_Click(object sender, RoutedEventArgs e)
+    {
+        if (ConfigHelper.DoesConfigExist())
+        {
+            LocalConfig = await ConfigHelper.LoadConfig();
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"Config data loaded.",
+                Severity = InfoBarSeverity.Success,
+            });
+        }
+        else
+        {
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"You must save the config first.",
+                Severity = InfoBarSeverity.Warning,
+            });
+        }
+    }
 }

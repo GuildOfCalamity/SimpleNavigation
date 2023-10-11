@@ -120,5 +120,22 @@ namespace SimpleNavigation
             }
             #endregion
         }
+
+        public static Point GetElementLocation(object obj)
+        {
+            try
+            {
+                var element = (FrameworkElement)obj;
+                Microsoft.UI.Xaml.Media.GeneralTransform buttonTransform = element.TransformToVisual(null);
+                Point desiredLocation = buttonTransform.TransformPoint(new Point());
+                desiredLocation.Y = desiredLocation.Y + element.ActualHeight;
+                return desiredLocation;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetElementLocation: {ex.Message}");
+                return new Point(100, 100);
+            }
+        }
     }
 }

@@ -149,6 +149,49 @@
                 </TreeView>
 
                 <StackPanel
+                    Margin="0,8,0,0"
+                    Orientation="Horizontal"
+                    Spacing="10">
+                    <Button
+                        Click="LoadConfig_Click"
+                        FontSize="{StaticResource MediumFontSize}"
+                        FontWeight="Medium">
+                        <Button.Foreground>
+                            <LinearGradientBrush StartPoint="1,0" EndPoint="1,1">
+                                <LinearGradientBrush.GradientStops>
+                                    <GradientStop Offset="0" Color="#FF76B9ED" />
+                                    <GradientStop Offset="0.1" Color="#CF76FFED" />
+                                    <GradientStop Offset="1" Color="#9FF6E9ED" />
+                                </LinearGradientBrush.GradientStops>
+                            </LinearGradientBrush>
+                        </Button.Foreground>
+                        Load Config
+                    </Button>
+                    <Button
+                        Click="SaveConfig_Click"
+                        FontSize="{StaticResource MediumFontSize}"
+                        FontWeight="Medium">
+                        <Button.Foreground>
+                            <LinearGradientBrush StartPoint="1,0" EndPoint="1,1">
+                                <LinearGradientBrush.GradientStops>
+                                    <GradientStop Offset="0" Color="#FF76B9ED" />
+                                    <GradientStop Offset="0.1" Color="#CF76FFED" />
+                                    <GradientStop Offset="1" Color="#9FF6E9ED" />
+                                </LinearGradientBrush.GradientStops>
+                            </LinearGradientBrush>
+                        </Button.Foreground>
+                        Save Config
+                    </Button>
+                </StackPanel>
+
+                <TextBlock x:Name="tbConfig" HorizontalAlignment="Left"><Span xml:space="preserve">
+FirstRun: <Run Foreground="{ThemeResource TextForeground1}" Text="{x:Bind LocalConfig.firstRun, Mode=OneWay}" />
+Version: <Run Foreground="{ThemeResource TextForeground2}" Text="{x:Bind LocalConfig.version, Mode=OneWay}" />
+Theme: <Run Foreground="{ThemeResource TextForeground1}" Text="{x:Bind LocalConfig.theme, Mode=OneWay}" />
+Time: <Run Foreground="{ThemeResource TextForeground2}" Text="{x:Bind LocalConfig.time, Mode=OneWay}" />
+                </Span></TextBlock>
+
+                <StackPanel
                     x:Name="spReferences"
                     Orientation="Vertical"
                     Spacing="10">
