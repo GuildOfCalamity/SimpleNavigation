@@ -1,8 +1,10 @@
 ## 💻 WinUI3 - Simple Navigation Demo
 
-![Example Picture](./ScreenShot.png)
+![Home Page](./ScreenShot.png)
 
-![Example Picture](./ScreenShot2.png)
+![Test Page](./ScreenShot2.png)
+
+![Package Page](./ScreenShot3.png)
 
 * An example of how to make your own navigation app without using the [NavigationView](https://learn.microsoft.com/en-us/windows/winui/api/microsoft.ui.xaml.controls.navigationview?view=winui-2.8) control.
 * Concerning the `NavigationView`, please note the differences between [UWP and WinUI](https://learn.microsoft.com/en-us/windows/apps/design/controls/navigationview#uwp-and-winui-2).
