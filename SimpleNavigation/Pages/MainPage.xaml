@@ -474,6 +474,12 @@
                 Tag="SimpleNavigation.LaunchPage" />
             <RadioButton
                 Click="RadioButton_Click"
+                Content="Package Page"
+                GroupName="Nav"
+                Style="{StaticResource NavigationRadioButtonStyle}"
+                Tag="SimpleNavigation.PackagePage" />
+            <RadioButton
+                Click="RadioButton_Click"
                 Content="Bluetooth Page"
                 GroupName="Nav"
                 Style="{StaticResource NavigationRadioButtonStyle}"

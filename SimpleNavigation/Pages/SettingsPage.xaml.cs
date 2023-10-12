@@ -17,6 +17,7 @@ using System.Reflection;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Microsoft.UI;
+using System.Text;
 
 namespace SimpleNavigation;
 
@@ -55,7 +56,7 @@ public sealed partial class SettingsPage : Page
         set { SetValue(IsOptionCheckedProperty, value); }
     }
 
-    // A basic IsChecked property.
+    // A basic Configuration property.
     public static readonly DependencyProperty LocalConfigProperty = DependencyProperty.Register(
         nameof(LocalConfig),
         typeof(Config),
@@ -66,7 +67,21 @@ public sealed partial class SettingsPage : Page
         get { return (Config)GetValue(LocalConfigProperty); }
         set { SetValue(LocalConfigProperty, value); }
     }
+
+    // A basic IsBusy property.
+    public static readonly DependencyProperty IsBusyProperty = DependencyProperty.Register(
+        nameof(IsBusy),
+        typeof(bool),
+        typeof(SettingsPage),
+        new PropertyMetadata(false, OnIsBusyChanged));
+    public bool IsBusy
+    {
+        get { return (bool)GetValue(IsBusyProperty); }
+        set { SetValue(IsBusyProperty, value); }
+    }
     #endregion
+
+    public Action? PB_ClickEvent { get; set; }
 
     public SettingsPage()
     {
@@ -74,6 +89,14 @@ public sealed partial class SettingsPage : Page
         this.InitializeComponent();
         PopulateTree();
         this.Loaded += SettingsPage_Loaded;
+        
+        // Action example for our ProgressButton.
+        PB_ClickEvent += async () =>
+        {
+            IsBusy = true;
+            await Task.Delay(3000);
+            IsBusy = false;
+        };
     }
 
     void SettingsPage_Loaded(object sender, RoutedEventArgs e)
@@ -174,6 +197,15 @@ public sealed partial class SettingsPage : Page
     }
     void OnIsCheckedChanged(bool val) => landing.Text = $"IsChecked = {val}";
 
+    static void OnIsBusyChanged(DependencyObject d, DependencyPropertyChangedEventArgs args)
+    {
+        // Call the non-static version of this method so that we can
+        // work with any local instanced variables. This is due to the
+        // fact that Dependency callbacks can only be static.
+        ((SettingsPage)d).OnIsBusyChanged((bool)args.NewValue);
+    }
+    void OnIsBusyChanged(bool val) => landing.Text = $"IsBusy = {val}";
+
     static void OnNodeChanged(DependencyObject d, DependencyPropertyChangedEventArgs args)
     {
         // Call the non-static version of this method so that we can
@@ -201,7 +233,7 @@ public sealed partial class SettingsPage : Page
         // fact that Dependency callbacks can only be static.
         ((SettingsPage)d).LocalConfigChanged((Config)args.NewValue);
     }
-    void LocalConfigChanged(Config val) => landing.Text = $"Config Changed: {val.theme}";
+    void LocalConfigChanged(Config val) => landing.Text = $"{val}"; // test our ToString() override
     #endregion
 
     #region [Helper Methods]
@@ -283,6 +315,7 @@ public sealed partial class SettingsPage : Page
                 Content = $"Config data saved.",
                 Severity = InfoBarSeverity.Success,
             });
+            LocalConfig = await ConfigHelper.LoadConfig();
         }
         else
         {

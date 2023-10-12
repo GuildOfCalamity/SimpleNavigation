@@ -78,10 +78,17 @@
     <None Remove="ImagesPage.xaml" />
     <None Remove="MainPage.xaml" />
     <None Remove="NextPage.xaml" />
+    <None Remove="PackagePage.xaml" />
     <None Remove="Pages\LaunchPage.xaml" />
     <None Remove="SearchPage.xaml" />
     <None Remove="SettingsPage.xaml" />
     <None Remove="TestPage.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Controls\ProgressButton.xaml">
+       <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
   <ItemGroup>
@@ -108,6 +115,16 @@
   -->
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Controls\ProgressButton.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="PackagePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="ImagesPage.xaml">

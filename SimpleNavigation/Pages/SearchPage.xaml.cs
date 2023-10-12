@@ -315,9 +315,9 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
         {
             foreach (var obj in e.AddedItems)
             {
+                Debug.WriteLine($"🡒 ListView selected items count: {e.AddedItems.Count}");
                 if (obj is Item item)
                 {
-                    Debug.WriteLine($">> ListView selected items count: {e.AddedItems.Count}");
                     var test = System.IO.Path.GetDirectoryName(item.Content);
                     if (!string.IsNullOrEmpty(test))
                     {

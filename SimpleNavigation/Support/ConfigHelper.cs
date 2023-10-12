@@ -24,12 +24,30 @@ public static class ConfigHelper
     #region [Tested Methods]
     public static bool DoesConfigExist()
     {
-        if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), $"{FileName}{FileExtension}")))
+        if (!App.IsPackaged)
         {
-            return true;
+            return File.Exists(Path.Combine(Directory.GetCurrentDirectory(), $"{FileName}{FileExtension}"));
         }
-
+        else if (App.IsPackaged)
+        {
+            var folder = ApplicationData.Current.LocalFolder;
+            return File.Exists(Path.Combine(folder.Path, $"{FileName}{FileExtension}"));
+        }
         return false;
+    }
+
+    public static string GetConfigFullPath()
+    {
+        if (!App.IsPackaged)
+        {
+            return Path.Combine(Directory.GetCurrentDirectory(), $"{FileName}{FileExtension}");
+        }
+        else if (App.IsPackaged)
+        {
+            var folder = ApplicationData.Current.LocalFolder;
+            return Path.Combine(folder.Path, $"{FileName}{FileExtension}");
+        }
+        return string.Empty;
     }
 
     public static string ToJson(this Dictionary<string, Dictionary<string, string>> source, bool indented = true)
@@ -204,35 +222,28 @@ public static class ConfigHelper
         #endregion
     }
 
-    public static void BinaryReadTest()
+    public static void WriteBinaryToFile(string filePath, byte[] data, FileMode mode = FileMode.Create)
     {
-        var data = Convert.FromHexString("0A0D02033132333435363738397FFF");
-        System.IO.BinaryReader br = new System.IO.BinaryReader(new System.IO.MemoryStream(data));
-        var val1 = br.ReadInt32();
-    }
-
-    public static void BinaryWriteTest()
-    {
-        // Store monitor info - we won't restore on original screen if original monitor layout has changed
-        using (var data = new System.IO.MemoryStream())
+        using (FileStream fs = new FileStream(filePath, mode))
         {
-            using (var sw = new System.IO.BinaryWriter(data, Encoding.UTF8, false))
+            using (BinaryWriter writer = new BinaryWriter(fs, Encoding.UTF8))
             {
-                //sw.BaseStream
-                sw.Write("StringValue");
-                sw.Write((int)1);
-                sw.Write((double)10.2);
-                sw.Write((float)20.1);
-                sw.Write(true);
-                sw.Flush();
-
-                //using (var fileStream = new StreamWriter(sw.BaseStream))
-                //{
-                //    fileStream.BaseStream.Seek(0, SeekOrigin.Begin);
-                //    fileStream.WriteLine("[{0}]", DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss.fff tt"));
-                //}
+                writer.Write(data);
             }
         }
+    }
+
+    public static byte[] ReadBinaryFromFile(string filePath)
+    {
+        byte[] result;
+        using (FileStream fs = new FileStream(filePath, FileMode.Open))
+        {
+            using (BinaryReader reader = new BinaryReader(fs, Encoding.UTF8))
+            {
+                result = reader.ReadBytes((int)fs.Length);
+            }
+        }
+        return result;
     }
     #endregion
 

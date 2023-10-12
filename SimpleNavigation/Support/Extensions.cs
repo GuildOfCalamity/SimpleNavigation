@@ -1,8 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Media.Imaging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -10,14 +6,21 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Imaging;
+
 using Windows.Storage;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
-using Microsoft.UI.Xaml.Controls;
+using Windows.Management.Deployment;
 
 namespace SimpleNavigation
 {
@@ -237,9 +240,9 @@ namespace SimpleNavigation
 			}
             return false;
 		}
-		#endregion
+        #endregion
 
-		public static async Task<ulong> GetFolderSize(this Windows.Storage.StorageFolder folder)
+        public static async Task<ulong> GetFolderSize(this Windows.Storage.StorageFolder folder)
         {
             ulong res = 0;
             foreach (StorageFile file in await folder.GetFilesAsync())
