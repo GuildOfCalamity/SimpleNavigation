@@ -31,13 +31,12 @@
 
             <TeachingTip.Content>
                 <StackPanel>
-                    <TextBlock TextTrimming="WordEllipsis" ToolTipService.ToolTip="Description">
+                    <TextBlock TextWrapping="Wrap" ToolTipService.ToolTip="Description">
                         <LineBreak />
                         <Run
                             FontSize="18"
                             Foreground="{ThemeResource TextForeground1}"
                             Text="First name" />
-                        <LineBreak />
                         <LineBreak />
                         <Run Text="As you start to type characters for the " />
                         <LineBreak />
@@ -45,11 +44,7 @@
                             FontWeight="Medium"
                             Foreground="Goldenrod"
                             Text="first name" />
-                        <Run Text="field a thread will be started in the" />
-                        <LineBreak />
-                        <Run Text="background to try and match your input" />
-                        <LineBreak />
-                        <Run Text="to a list of the most common first names." />
+                        <Run Text="field a thread will be started in the background to try and match your input to a list of the most common first names." />
                         <LineBreak />
                         <LineBreak />
                         <Run Foreground="Gray" Text="refer to the DisplaySuggestions() method" />

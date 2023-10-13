@@ -57,6 +57,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 	public MainPage()
     {
         this.InitializeComponent();
+		this.Loaded += MainPage_Loaded;
 
 		#region [Event Extras]
 		// We can setup keyboard events in a number of ways…
@@ -83,13 +84,13 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             TappedEventHandler 	                        Represents the method that will handle the Tapped event.
          */
 
+		//Extensions.DisplayRoutedEventsForFrameworkElement();
+
 		// [Hierarchy] Page => UserControl => Control => FrameworkElement => UIElement => DependencyObject
 
-		Extensions.DisplayRoutedEventsForFrameworkElement();
-
-		// When using this.AddHandler() these are the additional events you can use:
-
 		/** UIElement vs FrameworkElement Event Comparison **
+		
+        When using this.AddHandler() these are the additional events you can use:
 
            [UIElement]                 |  [FrameworkElement]
          ----------------------------------------------------------------
@@ -150,18 +151,27 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 		 **************************************************/
 		#endregion
 
-		this.Loaded += MainPage_Loaded;
-
         #region [Setup page-wide messaging]
         // These are only used for the InfoBar control.
+        BluetoothPage.PostMessageEvent += MainPage_PostMessageEvent;
         HomePage.PostMessageEvent += MainPage_PostMessageEvent;
         ImagesPage.PostMessageEvent += MainPage_PostMessageEvent;
+        LaunchPage.PostMessageEvent += MainPage_PostMessageEvent;
         NextPage.PostMessageEvent += MainPage_PostMessageEvent;
+        PackagePage.PostMessageEvent += MainPage_PostMessageEvent;
         SearchPage.PostMessageEvent += MainPage_PostMessageEvent;
         SettingsPage.PostMessageEvent += MainPage_PostMessageEvent;
         TestPage.PostMessageEvent += MainPage_PostMessageEvent;
-        LaunchPage.PostMessageEvent += MainPage_PostMessageEvent;
-        BluetoothPage.PostMessageEvent += MainPage_PostMessageEvent;
+        #endregion
+
+        #region [Superfluous]
+        var test = typeof(RelayCommand).GetConstructors().FirstOrDefault(c => c.GetParameters().Length != 0);
+        if (test != null)
+            Debug.WriteLine($"'{nameof(RelayCommand)}' has a constructor which takes a parameter.");
+
+        var mod = App.Attribs?.GetLoadedModules.FirstOrDefault();
+        if (mod != null)
+            Debug.WriteLine($"I can't live without this! 🡒 '{mod.FullyQualifiedName}'");
         #endregion
     }
 
@@ -334,11 +344,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 	/// <summary>
 	/// You will not see this event fire if clicking on a transparent background area.
 	/// </summary>
-	void PressedPointer(object sender, PointerRoutedEventArgs e) => Debug.WriteLine($">> [{e.Pointer.PointerDeviceType}] was pressed <<");
+	void PressedPointer(object sender, PointerRoutedEventArgs e) => Debug.WriteLine($"🡒 [{e.Pointer.PointerDeviceType}] was pressed <<");
 	#endregion
 
 	#region [Keyboard Events]
-	void PressedKey(object sender, KeyRoutedEventArgs e) => Debug.WriteLine($">> [{e.Key}] key was pressed <<");
+	void PressedKey(object sender, KeyRoutedEventArgs e) => Debug.WriteLine($"🡒 [{e.Key}] key was pressed <<");
 
     void MainPage_ProcessKeyboardAccelerators(UIElement sender, ProcessKeyboardAcceleratorEventArgs args)
     {
@@ -383,55 +393,10 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
     void OnKeyboardAcceleratorInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        Debug.WriteLine($"KeyboardAccelerator => {args.KeyboardAccelerator.Key}");
+        Debug.WriteLine($"KeyboardAccelerator 🡒 {args.KeyboardAccelerator.Key}");
         if (MainFrame.CanGoBack)
             MainFrame.GoBack();
         args.Handled = true;
     }
     #endregion
 }
-
-/// <summary>
-/// Support class for method invoking directly from the XAML.
-/// This could be done using converters, but I like to show different techniques offering the same result.
-/// </summary>
-public static class AssemblyHelper
-{
-    /// <summary>
-    /// Return the declaring type's version.
-    /// </summary>
-    /// <remarks>Includes string formatting.</remarks>
-    public static string GetVersion()
-    {
-        var ver = App.GetCurrentAssemblyVersion();
-        return $"Version {ver}";
-    }
-
-    /// <summary>
-    /// Return the declaring type's namespace.
-    /// </summary>
-    public static string? GetNamespace()
-    {
-        var assembly = App.GetCurrentNamespace();
-        return assembly ?? "WinUI3";
-    }
-
-    /// <summary>
-    /// Return the declaring type's assembly name.
-    /// </summary>
-    public static string? GetAssemblyName()
-    {
-        var assembly = App.GetCurrentAssemblyName()?.Split(',')[0].SeparateCamelCase();
-        return assembly ?? "WinUI3";
-    }
-
-    /// <summary>
-    /// Returns <see cref="DateTime.Now"/> in a long format, e.g. "Wednesday, August 30, 2023"
-    /// </summary>
-    /// <remarks>Includes string formatting.</remarks>
-    public static string GetFormattedDate()
-    {
-        return String.Format("{0:dddd, MMMM d, yyyy}", DateTime.Now);
-    }
-}
-

@@ -35,6 +35,7 @@ public partial class App : Application
     private static UISettings _UISettings = new UISettings();
     public static Window? MainWindow { get; set; }
     public static SystemState? State { get; set; }
+    public static AssemblyAttributes? Attribs;
     public static bool IsClosing { get; set; } = false;
     public static bool DebugMode { get; set; } = false;
     public static IntPtr WindowHandle { get; set; }
@@ -69,6 +70,7 @@ public partial class App : Application
         UnhandledException += ApplicationUnhandledException;
         #endregion
 
+        Attribs = new AssemblyAttributes();
         State = new SystemState();
 
         this.InitializeComponent();

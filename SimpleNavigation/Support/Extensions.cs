@@ -659,6 +659,95 @@ namespace SimpleNavigation
             return img;
         }
 
+        public static void BindCenterPoint(this Microsoft.UI.Composition.Visual target)
+        {
+            var exp = target.Compositor.CreateExpressionAnimation("Vector3(this.Target.Size.X / 2, this.Target.Size.Y / 2, 0f)");
+            target.StartAnimation("CenterPoint", exp);
+        }
+
+        public static void BindSize(this Microsoft.UI.Composition.Visual target, Microsoft.UI.Composition.Visual source)
+        {
+            var exp = target.Compositor.CreateExpressionAnimation("host.Size");
+            exp.SetReferenceParameter("host", source);
+            target.StartAnimation("Size", exp);
+        }
+
+        public static Microsoft.UI.Composition.ImplicitAnimationCollection CreateImplicitAnimation(this Microsoft.UI.Composition.ImplicitAnimationCollection source, string Target, TimeSpan? Duration = null)
+        {
+            Microsoft.UI.Composition.KeyFrameAnimation animation = null;
+            switch (Target.ToLower())
+            {
+                case "offset":
+                case "scale":
+                case "centerPoint":
+                case "rotationAxis":
+                    animation = source.Compositor.CreateVector3KeyFrameAnimation();
+                    break;
+
+                case "size":
+                    animation = source.Compositor.CreateVector2KeyFrameAnimation();
+                    break;
+
+                case "opacity":
+                case "blueRadius":
+                case "rotationAngle":
+                case "rotationAngleInDegrees":
+                    animation = source.Compositor.CreateScalarKeyFrameAnimation();
+                    break;
+
+                case "color":
+                    animation = source.Compositor.CreateColorKeyFrameAnimation();
+                    break;
+            }
+
+            if (animation == null) throw new ArgumentNullException("Unknown Target");
+            if (!Duration.HasValue) Duration = TimeSpan.FromSeconds(0.2d);
+            animation.InsertExpressionKeyFrame(1f, "this.FinalValue");
+            animation.Duration = Duration.Value;
+            animation.Target = Target;
+
+            source[Target] = animation;
+            return source;
+        }
+
+        /// <summary>
+        /// Dictionary<char, int> charCount = GetCharacterCount("some input text string here");
+        /// foreach (var kvp in charCount) { Debug.WriteLine($"Character: {kvp.Key}, Count: {kvp.Value}"); }
+        /// </summary>
+        /// <param name="input">the text string to analyze</param>
+        /// <returns><see cref="Dictionary{TKey, TValue}"/></returns>
+        public static Dictionary<char, int> GetCharacterCount(this string input)
+        {
+            Dictionary<char, int> charCount = new();
+
+            if (string.IsNullOrEmpty(input))
+                return charCount;
+
+            foreach (var ch in input)
+            {
+                if (charCount.ContainsKey(ch))
+                    charCount[ch]++;
+                else
+                    charCount[ch] = 1;
+            }
+
+            return charCount;
+        }
+
+        /// <summary>
+        /// Gets all the paragraphs in a given markdown document.
+        /// </summary>
+        /// <param name="text">The input markdown document.</param>
+        /// <returns>The raw paragraphs from <paramref name="text"/>.</returns>
+        public static IReadOnlyDictionary<string, string> GetParagraphs(this string text)
+        {
+            return Regex.Matches(text, @"(?<=\W)#+ ([^\n]+).+?(?=\W#|$)", RegexOptions.Singleline)
+               .OfType<Match>()
+               .ToDictionary(
+                 m => Regex.Replace(m.Groups[1].Value.Trim().Replace("&lt;", "<"), @"\[([^]]+)\]\([^)]+\)", m => m.Groups[1].Value),
+                 m => m.Groups[0].Value.Trim().Replace("&lt;", "<").Replace("[!WARNING]", "**WARNING:**").Replace("[!NOTE]", "**NOTE:**"));
+        }
+
         /// <summary>
         ///  var objects = IterateEnumValues{LogLevel}();
         /// </summary>

@@ -11,21 +11,34 @@
     mc:Ignorable="d">
 
     <Grid RowDefinitions="Auto,*">
-        <TextBlock
-            x:Name="landing"
+        <StackPanel
             Grid.Row="0"
-            HorizontalAlignment="Left"
-            FontSize="20" />
+            Orientation="Horizontal"
+            Spacing="10">
+            <TextBlock
+                x:Name="landing"
+                HorizontalAlignment="Left"
+                FontSize="20" />
+            <AutoSuggestBox
+                MinWidth="300"
+                Margin="14,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                QueryIcon="Find"
+                QuerySubmitted="ASB_QuerySubmitted" />
+        </StackPanel>
         <Border
             Grid.Row="1"
             Margin="-6,10,10,10"
             BorderBrush="Transparent"
             BorderThickness="1"
             CornerRadius="5">
+
             <!--
                 [ItemsView Style]
             -->
             <ItemsView
+                x:Name="ivItems"
                 ItemsSource="{x:Bind Items, Mode=OneWay}"
                 SelectionChanged="ItemsView_SelectionChanged"
                 SelectionMode="Single">
@@ -111,6 +124,7 @@
                     </DataTemplate>
                 </ItemsView.ItemTemplate>
             </ItemsView>
+
             <!--
                 [ListView Style]
             -->
@@ -188,6 +202,7 @@
                 </ListView.ItemTemplate>
             </ListView>
             -->
+
         </Border>
         <ProgressRing
             Grid.Row="0"

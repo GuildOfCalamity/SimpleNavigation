@@ -41,16 +41,11 @@ namespace SimpleNavigation
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? ""));
         }
 
-        ObservableCollection<PackageDetail> _items = new();
-        public ObservableCollection<PackageDetail> Items
-        {
-            get => _items;
-            set
-            {
-                _items = value;
-                OnPropertyChanged();
-            }
-        }
+        private string? filter;
+        private ObservableCollection<PackageDetail> _items = new();
+        public ObservableCollection<PackageDetail> Items => string.IsNullOrEmpty(filter)
+            ? _items
+            : new ObservableCollection<PackageDetail>(_items.Where(o => ApplyFilter(o, filter)));
 
         private bool _isBusy = false;
         public bool IsBusy
@@ -58,8 +53,11 @@ namespace SimpleNavigation
             get => _isBusy;
             set
             {
-                _isBusy = value;
-                OnPropertyChanged();
+                if (_isBusy != value) // Prevent uneccessary triggers.
+                {
+                    _isBusy = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -96,15 +94,25 @@ namespace SimpleNavigation
         async void PackagePage_Loaded(object sender, RoutedEventArgs e)
         {
             IsBusy = true;
-            landing.Text = $"Installed packages…";
-            var pkgs = await PackageDetailHelper.GatherAllPackagesForUserAsync(false);
-            Items.Clear();
-            foreach (var pkg  in pkgs)
+            if (string.IsNullOrEmpty(filter))
             {
-                if (!Items.Contains(pkg))
-                    Items.Add(pkg);
+                landing.Text = $"Installed packages";
+                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var pkgs = await PackageDetailHelper.GatherAllPackagesForUserAsync(false, cts.Token);
+                Items.Clear();
+                foreach (var pkg in pkgs)
+                {
+                    if (!Items.Contains(pkg))
+                        Items.Add(pkg);
+                }
+                landing.Text = $"{pkgs.Count} total packages";
             }
             IsBusy = false;
+        }
+
+        bool ApplyFilter(PackageDetail item, string filter)
+        {
+            return item.ApplyFilter(filter);
         }
 
         /// <summary>
@@ -187,6 +195,20 @@ namespace SimpleNavigation
                     }
                 }
             }
+        }
+
+        void ASB_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+            filter = args.QueryText;
+
+            // Our PackageDetail type does not inherit from ObservableObject, so we'll need to trigger a ItemsView refresh.
+            ivItems.DispatcherQueue.TryEnqueue(() =>
+            {
+                ivItems.ItemsSource = null;
+                ivItems.ItemsSource = Items;
+            });
+
+            landing.Text = $"{Items.Count} packages";
         }
     }
 }

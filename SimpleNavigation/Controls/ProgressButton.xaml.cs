@@ -270,9 +270,9 @@ public sealed partial class ProgressButton : UserControl
 	{
 		if (ThisProgress.IsIndeterminate)
 		{
+			ThisProgress.IsIndeterminate = false;
 			ThisProgress.Minimum = 0d;
 			ThisProgress.Maximum = 100d;
-			ThisProgress.IsIndeterminate = false;
 		}
 		ThisProgress.Value = newValue;
 	}

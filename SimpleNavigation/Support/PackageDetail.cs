@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Management.Deployment;
 
@@ -24,22 +25,35 @@ public class PackageDetail
     public string? Framework { get; set; }
     public string? Disabled { get; set; }
     public string? Dependencies { get; set; }
+
+    /// <summary>LINQ helper.</summary>
+    /// <example>_items.Where(o => ApplyFilter(o, "some filter"))</example>
+    public bool ApplyFilter(string filter)
+    {
+        if (!string.IsNullOrEmpty(FullName))
+            return FullName.Contains(filter, StringComparison.InvariantCultureIgnoreCase);
+        else
+            return true;
+    }
 }
 
 public static class PackageDetailHelper
 {
-    public static async Task<List<PackageDetail>> GatherAllPackagesForUserAsync(bool debugDump)
+    public static async Task<List<PackageDetail>> GatherAllPackagesForUserAsync(bool debugDump, CancellationToken token = default)
     {
-        return await Task.Run(() => { return GatherAllPackagesForUser(debugDump).OrderBy(o => o.FullName).ToList(); });
+        return await Task.Run(() => { return GatherAllPackagesForUser(debugDump, token).OrderBy(o => o.FullName).ToList(); });
     }
 
-    public static List<PackageDetail> GatherAllPackagesForUser(bool debugDump)
+    public static List<PackageDetail> GatherAllPackagesForUser(bool debugDump, CancellationToken token = default)
     {
         List<PackageDetail> items = new();
         PackageManager packageManager = new PackageManager();
         var packages = packageManager.FindPackagesForUser(string.Empty);
         foreach (var package in packages)
         {
+            if (token.IsCancellationRequested)
+                break;
+
             string locus = "N/A";
             try
             {

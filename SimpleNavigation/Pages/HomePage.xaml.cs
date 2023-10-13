@@ -16,6 +16,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Data;
 using System.Threading.Tasks;
+using Windows.System;
 
 namespace SimpleNavigation;
 
@@ -58,5 +59,14 @@ public sealed partial class HomePage : Page
             landing.Text = $"Parameter is not of type '{nameof(SystemState)}'";
         }
         base.OnNavigatedTo(e);
+    }
+
+    async void Button_Click(object sender, RoutedEventArgs e)
+    {
+        var btn = (sender as Button)?.Content;
+        if (btn != null)
+        {
+            await Launcher.LaunchUriAsync(new Uri($"https://learn.microsoft.com/en-us/search/?terms={btn}"));
+        }
     }
 }
