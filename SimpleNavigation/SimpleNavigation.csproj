@@ -83,6 +83,7 @@
     <None Remove="Pages\LaunchPage.xaml" />
     <None Remove="SearchPage.xaml" />
     <None Remove="SettingsPage.xaml" />
+    <None Remove="SkiaPage.xaml" />
     <None Remove="TestPage.xaml" />
   </ItemGroup>
 
@@ -121,6 +122,9 @@
     <None Update="Controls\ProgressButton.xaml">
       <Generator>MSBuild:Compile</Generator>
     </None>
+    <Page Update="SkiaPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="PackagePage.xaml">
