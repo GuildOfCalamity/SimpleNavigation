@@ -8,9 +8,12 @@
 
 ![Launch Page](./ScreenShot4.png)
 
+![Animation Page](./ScreenShot5.png)
+
 * An example of how to make your own navigation app without using the [NavigationView](https://learn.microsoft.com/en-us/windows/winui/api/microsoft.ui.xaml.controls.navigationview?view=winui-2.8) control.
 * Concerning the `NavigationView`, please note the differences between [UWP and WinUI](https://learn.microsoft.com/en-us/windows/apps/design/controls/navigationview#uwp-and-winui-2).
 * The navigation buttons are accomplished by custom styling of the [RadioButton](https://learn.microsoft.com/en-us/windows/apps/design/controls/radio-button) control.
+* I've added multiple pages that cover various topics, so there should be something for everyone.
 
 ## 🎛️ Usage
 * The driver application is for use in **Visual Studio 2022**.
