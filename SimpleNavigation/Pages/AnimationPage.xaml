@@ -10,7 +10,24 @@
     NavigationCacheMode="Enabled"
     mc:Ignorable="d">
 
-    <Grid HorizontalAlignment="Stretch" ToolTipService.ToolTip="" VerticalAlignment="Stretch">
-        <Canvas x:Name="canvas" />
+    <Grid
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Stretch"
+        RowDefinitions="Auto,*"
+        ToolTipService.ToolTip="Animations">
+        <StackPanel
+            Grid.Row="0"
+            Orientation="Horizontal"
+            Spacing="24">
+            <CheckBox
+                x:Name="cbCollisions"
+                Content="Collision detection"
+                IsChecked="{x:Bind CollisionEnable, Mode=TwoWay}" />
+            <CheckBox
+                x:Name="cbMagnetic"
+                Content="Magnetic force"
+                IsChecked="{x:Bind MagneticEnable, Mode=TwoWay}" />
+        </StackPanel>
+        <Canvas x:Name="canvas" Grid.Row="1" />
     </Grid>
 </Page>

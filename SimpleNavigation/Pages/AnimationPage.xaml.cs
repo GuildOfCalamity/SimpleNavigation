@@ -1,9 +1,11 @@
-using System;
+﻿using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-
+using System.Runtime.CompilerServices;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -19,109 +21,242 @@ using Windows.Storage.FileProperties;
 
 namespace SimpleNavigation;
 
-public sealed partial class AnimationPage : Page
+public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 {
-	double xSpeed = 5;
-	double ySpeed = 5;
+    #region [Props]
+	double xSpeed = 4;
+	double ySpeed = 4;
 	DispatcherTimer? timer = null;
 	List<ImageProps> images = new();
-	static int counter = 0;
+	bool use60FPS = true;
+	bool useBoundingBox = true;
+	bool insideUpdate = false;
+	// For framerate diagnostics.
+    static int counter = 0;
 	static double elapsed = 0;
 	static ValueStopwatch vsw = ValueStopwatch.StartNew();
-	static int ignoreCollisionCheckCounter = 0;
 
-	public AnimationPage()
+    /// <summary>
+    /// An event that the main page can subscribe to.
+    /// </summary>
+    public static event EventHandler<Message>? PostMessageEvent;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? ""));
+    }
+
+	private bool magneticEnable = false;
+    public bool MagneticEnable
+    {
+        get => magneticEnable;
+        set
+        {
+            magneticEnable = value;
+            OnPropertyChanged();
+            // The magnet effect is coupled with the collision system.
+            if (magneticEnable is true && collisionEnable is false)
+				CollisionEnable = true;
+        }
+    }
+
+    private bool collisionEnable = false;
+    public bool CollisionEnable
+    {
+        get => collisionEnable;
+        set
+        {
+            collisionEnable = value;
+            OnPropertyChanged();
+            // The magnet effect is coupled with the collision system.
+            if (collisionEnable is false && magneticEnable is true)
+                MagneticEnable = false;
+        }
+    }
+	#endregion
+
+    public AnimationPage()
 	{
 		this.InitializeComponent();
 		this.Loaded += AnimationPage_Loaded;
+        this.Unloaded += AnimationPage_Unloaded;
 	}
 
-	void AnimationPage_Loaded(object? sender, RoutedEventArgs e)
+    /// <summary>
+    /// Handle any parameter passed.
+    /// </summary>
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        if (e.Parameter != null && e.Parameter is SystemState sys)
+        {
+            Debug.WriteLine($"You sent '{sys.Title}'");
+            PostMessageEvent?.Invoke(this, new Message
+            {
+                Content = $"OnNavigatedTo ⇨ {sys.Title}",
+                Severity = InfoBarSeverity.Informational,
+            });
+        }
+        else
+        {
+            Debug.WriteLine($"Parameter is not of type '{nameof(SystemState)}'");
+        }
+        base.OnNavigatedTo(e);
+    }
+
+    void AnimationPage_Loaded(object? sender, RoutedEventArgs e)
 	{
-		if (timer != null)
+		if (timer != null || images.Count > 0)
 			return;
 
-		// If you want 60 FPS then use me for canvas updates.
-		CompositionTarget.Rendering += CompositionTarget_Rendering;
-
-		// Up to 1300 images can be rendered without performance degradation (on my rig).
-		for (int i = 0; i < 30; i++) 
+		// Up to 1250 images can be rendered without performance degradation.
+		for (int i = 0; i < 25; i++) 
 		{
 			int x = 1; int y = 1;
-			int w = 60; int h = 60;
+			int w = 80; int h = 80;
 
 			if (canvas.ActualWidth > 0)
-				x = Random.Shared.Next(1, (int)canvas.ActualWidth - (w + 1));
+				x = Random.Shared.Next(1, (int)canvas.ActualWidth/2);
 			else
 				x = Random.Shared.Next(1, 500);
 
 			if (canvas.ActualHeight > 0)
-				y = Random.Shared.Next(1, (int)canvas.ActualHeight - (h + 1));
+				y = Random.Shared.Next(1, h * 3);
 			else
-				y = Random.Shared.Next(1, 500);
+				y = Random.Shared.Next(1, w * 3);
 
 			var prop = new ImageProps {
 				XCoord = x,	YCoord = y,
 				Width = (double)w,
 				Height = (double)h,
-				XSpeed = (double)Random.Shared.Next(2, 5),
-				YSpeed = (double)Random.Shared.Next(2, 5),
-			};
+				XSpeed = (double)Random.Shared.Next(1, 5),
+				YSpeed = (double)Random.Shared.Next(1, 5),
+				Name = $"Image #{i + 1}"
+            };
 			images.Add(prop);
 
-			// Create Image element dynamically
-			var image = new Image();
-			
-			image.Opacity = 0.61;
+			// Create Image element dynamically.
+			Image? image = new();
 			image.Source = new BitmapImage(new Uri("ms-appx:///Assets/Sphere.png"));
 			image.Width = prop.Width;
 			image.Height = prop.Height;
-			image.Name = $"Sphere #{i + 1}";
-			// Add image to canvas
-			canvas.Children.Add(image);
 
-			// Update image position
+			// Add image to canvas.
+			canvas.Children.Add(image);
+			
+			// Update image position based on random coords.
 			Canvas.SetLeft(image, x);
 			Canvas.SetTop(image, y);
 
-			// Set ToolTip for each Image element
-			ToolTipService.SetToolTip(canvas.Children[i], image.Name);
+			// Set tooltip for each Image element.
+			ToolTipService.SetToolTip(canvas.Children[i], prop.Name);
 		}
 
-		// Create a timer for animation.
-		timer = new DispatcherTimer();
-		timer.Interval = TimeSpan.FromMilliseconds(12); // ~50 FPS
-		timer.Tick += AnimationTimer_Tick;
-		timer.Start();
+		if (use60FPS)
+		{
+			CompositionTarget.Rendering += CompositionTarget_Rendering;
+		}
+		else
+		{
+			// Use 30 frames per second.
+			timer = new DispatcherTimer();
+			timer.Interval = TimeSpan.FromMilliseconds(16); // DispatchTimer does not have this resolution, but we'll ask for it anyway.
+			timer.Tick += AnimationTimer_Tick;
+			timer.Start();
+		}
 	}
 
-	/// <summary>
-	/// If you want 60 FPS then use me.
-	/// </summary>
-	void CompositionTarget_Rendering(object? sender, object e)
-	{
-		// Canvas update code here.
-	}
+    void AnimationPage_Unloaded(object sender, RoutedEventArgs e)
+    {
+		if (images.Count > 0)
+		{
+			var hits = images.Where(o => o.Bangs > 0).OrderByDescending(o => o.Bangs);
+			foreach (var ip in hits)
+			{
+				Debug.WriteLine($"{ip.Name} 🡒 {ip.Bangs} collisions");
+			}
 
-	/// <summary>
-	/// The DispatcherTimer in WinUI3 has a resolution of approximately 15.6 milliseconds per tick,
-	/// which corresponds to a frame rate of around 64 frames per second (FPS). This means that the
-	/// timer ticks at a frequency of approximately 64 times per second, with each tick occurring 
-	/// roughly every 15.6 milliseconds.
-	/// The DispatcherTimer is based on the UI thread's message pump, which is why its accuracy is bound 
-	/// to the UI thread's message processing rate.In most scenarios, especially for UI-related tasks and 
-	/// animations, a frame rate of 60 FPS (16.6 milliseconds per frame) or slightly above is generally 
-	/// sufficient for smooth user experience.
-	/// If you need a higher update rate or a more accurate timer, you might consider using alternative 
-	/// timer mechanisms. One such alternative is the CompositionTarget.Rendering event, which is triggered 
-	/// each time a new frame is rendered.This event is tightly synchronized with the display's refresh 
-	/// rate, providing a more accurate timer for animations.
-	/// You can move this code to the <see cref="CompositionTarget_Rendering(object?, object)"/> 
-	/// event to attain 60 FPS performance.
-	/// </summary>
-	void AnimationTimer_Tick(object? sender, object e)
+            // Deferred Query
+            //IOrderedEnumerable<ImageProps>? deferred = from p in images where p.Bangs > 0 orderby p.Bangs select p;
+            
+			// Immediate Query
+            //List<ImageProps>? immediate = (from p in images where p.Bangs > 0 orderby p.Bangs select p).ToList();
+        }
+    }
+
+    /// <summary>
+    /// The <see cref="DispatcherTimer"/> in WinUI3 has a resolution of approximately 33.34 milliseconds 
+    /// per tick, which corresponds to a frame rate of around 30 frames per second. This means that 
+    /// the timer ticks at a frequency of approximately 30 times per second, with each tick occurring 
+    /// roughly every 33.34 milliseconds.
+    /// The <see cref="DispatcherTimer"/> is based on the UI thread's message pump, which is why its 
+	/// accuracy is bound to the UI thread's message processing rate. In most scenarios, especially for 
+	/// UI-related tasks and animations, a frame rate of 60 FPS (16.67 milliseconds per frame) or slightly 
+	/// above is generally best for a smooth user experience.
+    /// If you need a higher update rate or a more accurate timer, you might consider using alternative 
+    /// timer mechanisms. One such alternative is the <see cref="CompositionTarget.Rendering"/> event, 
+    /// which is triggered each time a new frame is rendered.This event is tightly synchronized with the 
+    /// display's refresh rate, providing a more accurate timer for animations.
+    /// </summary>
+    void CompositionTarget_Rendering(object? sender, object e)
 	{
-		if (canvas.ActualWidth == double.NaN || canvas.ActualHeight == double.NaN)
+		if (!insideUpdate)
+		{
+			try
+			{
+				insideUpdate = true;
+
+				// If the user is on another page the canvas size will not be usable.
+				if (canvas.ActualWidth == 0 || canvas.ActualWidth == double.NaN)
+					return;
+
+                // Move a group of Image controls
+                for (int i = 0; i < images.Count; i++)
+                    MoveImageWithCollisions(images[i], canvas.Children[i] as Image);
+
+                #region [Framerate Diagnostics]
+                // Our first sample will be off by a fractional amount due to page load
+                // and object render events, but after that it should be accurate.
+                elapsed += vsw.GetElapsedTime().TotalMilliseconds;
+                vsw = ValueStopwatch.StartNew();
+                if (++counter >= 60)
+                {
+                    var cycle = elapsed / 60d;
+                    Debug.WriteLine($"Cycle average: {cycle:N1} milliseconds ({(1000 / cycle):N1} FPS)");
+                    counter = 0; elapsed = 0d;
+                }
+                #endregion
+            }
+            finally
+			{
+                insideUpdate = false;
+            }
+        }
+		else
+		{
+			// We should never get here.
+            Debug.WriteLine($"🡒 Frame skipped!");
+        }
+    }
+
+    /// <summary>
+    /// The <see cref="DispatcherTimer"/> in WinUI3 has a resolution of approximately 33.34 milliseconds 
+    /// per tick, which corresponds to a frame rate of around 30 frames per second. This means that 
+    /// the timer ticks at a frequency of approximately 30 times per second, with each tick occurring 
+    /// roughly every 33.34 milliseconds.
+    /// The <see cref="DispatcherTimer"/> is based on the UI thread's message pump, which is why its 
+	/// accuracy is bound to the UI thread's message processing rate. In most scenarios, especially for 
+	/// UI-related tasks and animations, a frame rate of 60 FPS (16.67 milliseconds per frame) or slightly 
+	/// above is generally best for a smooth user experience.
+    /// If you need a higher update rate or a more accurate timer, you might consider using alternative 
+    /// timer mechanisms. One such alternative is the <see cref="CompositionTarget.Rendering"/> event, 
+    /// which is triggered each time a new frame is rendered.This event is tightly synchronized with the 
+    /// display's refresh rate, providing a more accurate timer for animations.
+    /// </summary>
+    void AnimationTimer_Tick(object? sender, object e)
+	{
+        // If the user is on another page the canvas size will not be usable.
+        if (canvas.ActualWidth == 0 || canvas.ActualWidth == double.NaN)
 			return;
 
 		// We want to avoid oversubscription. In the event that
@@ -138,7 +273,7 @@ public sealed partial class AnimationPage : Page
 		for (int i = 0; i < images.Count; i++)
 			MoveImageWithCollisions(images[i], canvas.Children[i] as Image);
 
-		#region [Framerate Debug]
+		#region [Framerate Diagnostics]
 		// Our first sample will be off by a fractional amount due to page load
 		// and object render events, but after that it should be accurate.
 		elapsed += vsw.GetElapsedTime().TotalMilliseconds;
@@ -152,65 +287,6 @@ public sealed partial class AnimationPage : Page
 		#endregion
 
 		timer?.Start();
-	}
-
-	/// <summary>
-	/// Update a single image.
-	/// </summary>
-	void MoveImage(Image image)
-	{
-		double x = Canvas.GetLeft(image);
-		double y = Canvas.GetTop(image);
-
-		// Update position
-		x += xSpeed;
-		y += ySpeed;
-
-		// Bounce off the edges
-		if (x < 0 || x > canvas.ActualWidth - image.ActualWidth) xSpeed *= -1;
-		if (y < 0 || y > canvas.ActualHeight - image.ActualHeight) ySpeed *= -1;
-
-		// Handle resizing issues.
-		if (x < -1) x = 1;
-		if (x > (canvas.ActualWidth - (image.Width - 9))) x -= 8;
-		if (y < -1) y = 1;
-		if (y > (canvas.ActualHeight - (image.Height - 9))) y -= 8;
-
-		// Update image position
-		Canvas.SetLeft(image, x);
-		Canvas.SetTop(image, y);
-	}
-
-	/// <summary>
-	/// Update a single image based on its <see cref="ImageProps"/>.
-	/// </summary>
-	void MoveImage(ImageProps properties, Image? image)
-	{
-		if (image == null)
-			return;
-
-		double x = Canvas.GetLeft(image);
-		double y = Canvas.GetTop(image);
-
-		// Update position
-		x += properties.XSpeed;
-		y += properties.YSpeed;
-
-		// Bounce off the edges
-		if (canvas.ActualWidth > 0)
-			if (x < 0 || x > canvas.ActualWidth - image.ActualWidth) properties.XSpeed *= -1;
-		if (canvas.ActualHeight > 0)
-			if (y < 0 || y > canvas.ActualHeight - image.ActualHeight) properties.YSpeed *= -1;
-
-		// Handle resizing issues.
-		if (x < -1) x = 1;
-		if (x > (canvas.ActualWidth - (image.Width - 9))) x -= 8;
-		if (y < -1) y = 1;
-		if (y > (canvas.ActualHeight - (image.Height - 9))) y -= 8;
-
-		// Update image position
-		Canvas.SetLeft(image, x);
-		Canvas.SetTop(image, y);
 	}
 
 	/// <summary>
@@ -247,85 +323,172 @@ public sealed partial class AnimationPage : Page
 			}
 		}
 		
-		if (++ignoreCollisionCheckCounter > 4000) // Let some time go by before testing collisions.
+		if (collisionEnable)
 		{
-			#region [Check for collisions with other images using distance formula]
-			foreach (var otherImage in images)
+			image.Opacity = 0.9;
+
+			if (!magneticEnable)
 			{
-				if (otherImage != properties)
+				#region [Check for collisions with other images using distance formula]
+				foreach (var otherImage in images)
 				{
-					double otherX = otherImage.XCoord;
-					double otherY = otherImage.YCoord;
-					double distance = Math.Sqrt(Math.Pow(x - otherX, 2) + Math.Pow(y - otherY, 2));
-			
-					// Assuming images are square, change to appropriate width for non-square images.
-					if (distance < image.Width + 1)
+					if (otherImage != properties)
 					{
-						// Handle collision by swapping their speeds.
-						double tempXSpeed = properties.XSpeed;
-						double tempYSpeed = properties.YSpeed;
-						properties.XSpeed = otherImage.XSpeed;
-						properties.YSpeed = otherImage.YSpeed;
-						otherImage.XSpeed = tempXSpeed;
-						otherImage.YSpeed = tempYSpeed;
-			
-						// Adjust positions to avoid overlap.
-						double angle = Math.Atan2(y - otherY, x - otherX);
-						x = otherX + Math.Cos(angle) * properties.Width;
-						y = otherY + Math.Sin(angle) * properties.Width;
+						double otherX = otherImage.XCoord;
+						double otherY = otherImage.YCoord;
+						double distance = Math.Sqrt(Math.Pow(x - otherX, 2) + Math.Pow(y - otherY, 2));
+
+						// Assuming images are square, change to appropriate width for non-square images.
+						if (distance < image.Width + 1)
+						{
+							// Record the collision.
+							otherImage.Bangs += 1;
+
+							// Handle collision by swapping their speeds.
+							double tempXSpeed = properties.XSpeed;
+							double tempYSpeed = properties.YSpeed;
+							properties.XSpeed = otherImage.XSpeed;
+							properties.YSpeed = otherImage.YSpeed;
+							otherImage.XSpeed = tempXSpeed;
+							otherImage.YSpeed = tempYSpeed;
+
+							// Adjust positions to avoid overlap.
+							double angle = Math.Atan2(y - otherY, x - otherX);
+							x = otherX + Math.Cos(angle) * properties.Width;
+							y = otherY + Math.Sin(angle) * properties.Width;
+						}
 					}
 				}
+				#endregion
 			}
-			#endregion
+			else
+			{
+				#region [Check for collisions with other images using bounding boxes]
+				foreach (var otherImage in images)
+				{
+					if (otherImage != properties)
+					{
+						double otherX = otherImage.XCoord;
+						double otherY = otherImage.YCoord;
+				
+						// Check for collision using bounding boxes
+						if (x < otherX + otherImage.Width && x + image.ActualWidth > otherX && y < otherY + otherImage.Height && y + image.ActualHeight > otherY)
+						{
+							// Record the collision.
+							otherImage.Bangs += 1;
+				
+							// Handle collision: swap speeds
+							double tempXSpeed = properties.XSpeed;
+							double tempYSpeed = properties.YSpeed;
+							properties.XSpeed = otherImage.XSpeed;
+							properties.YSpeed = otherImage.YSpeed;
+							otherImage.XSpeed = tempXSpeed;
+							otherImage.YSpeed = tempYSpeed;
+				
+							// Adjust positions to avoid overlap. (needs improvement)
+							//x = Math.Clamp(x, otherX - image.Width, otherX + otherImage.Width);
+							//y = Math.Clamp(y, otherY - image.Height, otherY + otherImage.Height);
 
-			#region [Check for collisions with other images using bounding boxes]
-			//foreach (var otherImage in images)
-			//{
-			//	if (otherImage != properties)
-			//	{
-			//		double otherX = otherImage.XCoord;
-			//		double otherY = otherImage.YCoord;
-			//
-			//		// Check for collision using bounding boxes
-			//		if (x < otherX + otherImage.Width &&
-			//			x + image.ActualWidth > otherX &&
-			//			y < otherY + otherImage.Height &&
-			//			y + image.ActualHeight > otherY)
-			//		{
-			//			// Handle collision: swap speeds
-			//			double tempXSpeed = properties.XSpeed;
-			//			double tempYSpeed = properties.YSpeed;
-			//			properties.XSpeed = otherImage.XSpeed;
-			//			properties.YSpeed = otherImage.YSpeed;
-			//			otherImage.XSpeed = tempXSpeed;
-			//			otherImage.YSpeed = tempYSpeed;
-			//
-			//			// Adjust positions to avoid overlap
-			//			x = Math.Clamp(x, otherX - image.Width, otherX + otherImage.Width);
-			//			y = Math.Clamp(y, otherY - image.Height, otherY + otherImage.Height);
-			//		}
-			//	}
-			//}
-			#endregion
-		}
+                            // Adjust positions to avoid overlap. (magnet effect)
+                            double angle = Math.Atan2(y - otherY, x - otherX);
+                            x = otherX + Math.Cos(angle) * properties.Width;
+                            y = otherY + Math.Sin(angle) * properties.Width;
+                        }
+                    }
+				}
+				#endregion
+			}
+        }
+		else
+		{
+			// Since the images will be passing in front of or behind
+			// each other we'll want the user to be able to see them.
+            image.Opacity = 0.65;
+        }
 
-		// Update image position
-		Canvas.SetLeft(image, x);
+        // Update image position.
+        Canvas.SetLeft(image, x);
 		Canvas.SetTop(image, y);
 
-		// Update properties
+		// Update image properties.
 		properties.XCoord = x;
 		properties.YCoord = y;
 	}
+
+	/// <summary>
+	/// Update a single image.
+	/// </summary>
+	void MoveImage(Image? image)
+	{
+        if (image == null)
+            return;
+
+        double x = Canvas.GetLeft(image);
+		double y = Canvas.GetTop(image);
+
+		// Update position
+		x += xSpeed;
+		y += ySpeed;
+
+		// Bounce off the edges.
+		if (x < 0 || x > canvas.ActualWidth - image.ActualWidth) xSpeed *= -1;
+		if (y < 0 || y > canvas.ActualHeight - image.ActualHeight) ySpeed *= -1;
+
+		// Handle resizing issues.
+		if (x < -1) x = 1;
+		if (x > (canvas.ActualWidth - (image.Width - 9))) x -= 8;
+		if (y < -1) y = 1;
+		if (y > (canvas.ActualHeight - (image.Height - 9))) y -= 8;
+
+		// Update image position.
+		Canvas.SetLeft(image, x);
+		Canvas.SetTop(image, y);
+	}
+
+	/// <summary>
+	/// Update a single image based on its <see cref="ImageProps"/>.
+	/// </summary>
+	void MoveImage(ImageProps properties, Image? image)
+	{
+		if (image == null)
+			return;
+
+		double x = Canvas.GetLeft(image);
+		double y = Canvas.GetTop(image);
+
+		// Update position.
+		x += properties.XSpeed;
+		y += properties.YSpeed;
+
+		// Bounce off the edges.
+		if (canvas.ActualWidth > 0)
+			if (x < 0 || x > canvas.ActualWidth - image.ActualWidth) properties.XSpeed *= -1;
+		if (canvas.ActualHeight > 0)
+			if (y < 0 || y > canvas.ActualHeight - image.ActualHeight) properties.YSpeed *= -1;
+
+		// Handle resizing issues.
+		if (x < -1) x = 1;
+		if (x > (canvas.ActualWidth - (image.Width - 9))) x -= 8;
+		if (y < -1) y = 1;
+		if (y > (canvas.ActualHeight - (image.Height - 9))) y -= 8;
+
+		// Update image position.
+		Canvas.SetLeft(image, x);
+		Canvas.SetTop(image, y);
+	}
 }
 
+/// <summary>
+/// A simple data model for image objects.
+/// </summary>
 public class ImageProps
 {
+	public int Bangs { get; set; }
+	public string? Name { get; set; }
 	public double XCoord { get; set; }
 	public double YCoord { get; set; }
 	public double XSpeed { get; set; }
 	public double YSpeed { get; set; }
 	public double Width { get; set; }
 	public double Height { get; set; }
-	public string Name { get; set; }
 }

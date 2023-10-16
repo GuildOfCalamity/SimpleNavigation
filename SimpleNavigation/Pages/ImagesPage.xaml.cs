@@ -77,6 +77,16 @@ public sealed partial class ImagesPage : Page
         }
     }
 
+    async Task<StorageFolder> GetKnownPicturesPath()
+    {
+        return await KnownFolders.GetFolderAsync(KnownFolderId.PicturesLibrary);
+    }
+
+    async Task<StorageFolder> GetKnownDocumentsPath()
+    {
+        return await KnownFolders.GetFolderAsync(KnownFolderId.DocumentsLibrary);
+    }
+
     public async static Task<ImageFileProps> LoadImageInfoAsync(StorageFile file)
     {
         var properties = await file.Properties.GetImagePropertiesAsync();

@@ -138,6 +138,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                             icoPath = props["System.Devices.Icon"] as string;
                             if (!string.IsNullOrEmpty(icoPath))
                             {
+                                // There are other ways of doing this.
                                 var index = icoPath.Split(',')[1].Replace("-","");
                                 icoPath = $"/Assets/ico{index}.ico";
                             }
@@ -204,6 +205,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
 							icoPath = props["System.Devices.Icon"] as string;
                             if (!string.IsNullOrEmpty(icoPath))
                             {
+                                // There are other ways of doing this.
                                 var index = icoPath.Split(',')[1].Replace("-", "");
                                 icoPath = $"/Assets/ico{index}.ico";
                             }
@@ -326,6 +328,12 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             }
             #endregion
         }
+        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions
+        {
+            String? s = rwe.WrappedException as String;
+            if (s != null)
+                Debug.WriteLine($"BluetoothPage_LoadedAsync: {s}");
+        }
         catch (Exception ex)
         {
 			Status = $"{ex.Message}";
@@ -348,6 +356,13 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             DeviceInformationCollection? devices = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
             return devices;
         }
+        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions
+        {
+            String? s = rwe.WrappedException as String;
+            if (s != null)
+                Debug.WriteLine($"GatherBasic: {s}");
+            return null;
+        }
         catch (Exception ex) 
         {
             Debug.WriteLine($"GatherBasic: {ex.Message}");
@@ -367,6 +382,13 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             string selector = "System.Devices.DevObjectType:=5"; //  We'll only filter by the most basic category.
             DeviceInformationCollection? devices = await DeviceInformation.FindAllAsync(selector);
             return devices;
+        }
+        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions
+        {
+            String? s = rwe.WrappedException as String;
+            if (s != null)
+                Debug.WriteLine($"GatherModerate: {s}");
+            return null;
         }
         catch (Exception ex) 
         {
@@ -505,7 +527,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                 // Protect against race condition if the task runs after the app stopped the deviceWatcher.
                 if (sender == deviceWatcher)
                 {
-                    BluetoothLEDeviceDisplay bleDeviceDisplay = FindBluetoothLEDeviceDisplay(deviceInfoUpdate.Id);
+                    BluetoothLEDeviceDisplay? bleDeviceDisplay = FindBluetoothLEDeviceDisplay(deviceInfoUpdate.Id);
                     if (bleDeviceDisplay != null)
                     {
                         // Device is already being displayed - update UX.
@@ -513,7 +535,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                         return;
                     }
 
-                    DeviceInformation deviceInfo = FindUnknownDevices(deviceInfoUpdate.Id);
+                    DeviceInformation? deviceInfo = FindUnknownDevices(deviceInfoUpdate.Id);
                     if (deviceInfo != null)
                     {
                         deviceInfo.Update(deviceInfoUpdate);
