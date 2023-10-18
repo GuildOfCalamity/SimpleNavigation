@@ -68,6 +68,8 @@
 
   <ItemGroup>
     <None Remove="Assets\Background.png" />
+    <None Remove="Assets\ColorWheel_.png" />
+    <None Remove="Assets\Earth2_.png" />
     <None Remove="Assets\FileIcon.png" />
     <None Remove="Assets\gear1.png" />
     <None Remove="Assets\gear2.png" />

@@ -422,76 +422,75 @@
             Text="Main Page" />
 
         <!--  Navigation Options  -->
-        <StackPanel
-            Grid.Row="1"
-            Grid.Column="0"
-            Padding="10"
-            VerticalAlignment="Top"
-            Spacing="10">
-            <!--  Add New Pages Here  -->
-            <RadioButton
-                x:Name="rbHome"
-                Click="RadioButton_Click"
-                Content="Home Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.HomePage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Settings Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.SettingsPage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Next Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.NextPage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Test Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.TestPage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Images Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.ImagesPage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Search Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.SearchPage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Launch Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.LaunchPage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Package Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.PackagePage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Animation Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.AnimationPage" />
-            <RadioButton
-                Click="RadioButton_Click"
-                Content="Bluetooth Page"
-                GroupName="Nav"
-                Style="{StaticResource NavigationRadioButtonStyle}"
-                Tag="SimpleNavigation.BluetoothPage" />
-
-        </StackPanel>
+        <ScrollViewer Grid.Row="1" Grid.Column="0">
+            <StackPanel
+                Padding="10"
+                VerticalAlignment="Top"
+                Spacing="10">
+                <!--  Add New Pages Here  -->
+                <RadioButton
+                    x:Name="rbHome"
+                    Click="RadioButton_Click"
+                    Content="Home Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.HomePage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Animation Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.AnimationPage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Settings Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.SettingsPage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Next Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.NextPage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Test Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.TestPage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Images Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.ImagesPage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Search Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.SearchPage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Launch Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.LaunchPage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Package Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.PackagePage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="Bluetooth Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.BluetoothPage" />
+            </StackPanel>
+        </ScrollViewer>
 
         <!--  Footer  -->
         <StackPanel

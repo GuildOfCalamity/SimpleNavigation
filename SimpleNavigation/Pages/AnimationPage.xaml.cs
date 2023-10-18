@@ -17,6 +17,7 @@ using Microsoft.UI.Xaml.Navigation;
 
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Storage;
 using Windows.Storage.FileProperties;
 
 namespace SimpleNavigation;
@@ -76,12 +77,32 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
     }
 	#endregion
 
+	List<Uri> assets = new();
+
     public AnimationPage()
 	{
 		this.InitializeComponent();
 		this.Loaded += AnimationPage_Loaded;
         this.Unloaded += AnimationPage_Unloaded;
-	}
+		LoadLocalAssets();
+    }
+
+    /// <summary>
+    /// Load our image roster.
+    /// </summary>
+    void LoadLocalAssets()
+    {
+		string path = string.Empty;
+        if (!App.IsPackaged)
+            path = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
+		else
+            path = Path.Combine(ApplicationData.Current.LocalFolder.Path, "Assets");
+
+        foreach (var f in Directory.GetFiles(path, "*_.png", SearchOption.TopDirectoryOnly))
+        {
+            assets.Add(new Uri($"ms-appx:///Assets/{Path.GetFileName(f)}"));
+        }
+    }
 
     /// <summary>
     /// Handle any parameter passed.
@@ -106,24 +127,36 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 
     void AnimationPage_Loaded(object? sender, RoutedEventArgs e)
 	{
-		if (timer != null || images.Count > 0)
+		bool reload = false;
+
+		if (timer != null || assets.Count == 0)
 			return;
 
-		// Up to 1250 images can be rendered without performance degradation.
-		for (int i = 0; i < 25; i++) 
+		var img = assets[Random.Shared.Next(0, assets.Count)];
+
+		// Each time the page is loaded pick a new image to render.
+		if (images.Count > 0) 
+		{
+            canvas.Children.Clear();
+            images.Clear();
+			reload = true;
+		}
+
+        // Up to 1250 images can be rendered without performance degradation.
+        for (int i = 0; i < 40; i++) 
 		{
 			int x = 1; int y = 1;
-			int w = 80; int h = 80;
+			int w = 90; int h = 90;
 
 			if (canvas.ActualWidth > 0)
-				x = Random.Shared.Next(1, (int)canvas.ActualWidth/2);
+				x = Random.Shared.Next(1, (int)canvas.ActualWidth / 2);
 			else
-				x = Random.Shared.Next(1, 500);
+				x = Random.Shared.Next(1, w * 3);
 
 			if (canvas.ActualHeight > 0)
-				y = Random.Shared.Next(1, h * 3);
+				y = Random.Shared.Next(1, (int)canvas.ActualHeight / 2);
 			else
-				y = Random.Shared.Next(1, w * 3);
+				y = Random.Shared.Next(1, h * 3);
 
 			var prop = new ImageProps {
 				XCoord = x,	YCoord = y,
@@ -137,9 +170,10 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 
 			// Create Image element dynamically.
 			Image? image = new();
-			image.Source = new BitmapImage(new Uri("ms-appx:///Assets/Sphere.png"));
+			image.Source = new BitmapImage(img);
 			image.Width = prop.Width;
 			image.Height = prop.Height;
+			image.CenterPoint = new System.Numerics.Vector3(w / 2, h / 2, 0);
 
 			// Add image to canvas.
 			canvas.Children.Add(image);
@@ -152,7 +186,10 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 			ToolTipService.SetToolTip(canvas.Children[i], prop.Name);
 		}
 
-		if (use60FPS)
+        if (images.Count > 0 && reload) 
+			return; 
+
+        if (use60FPS)
 		{
 			CompositionTarget.Rendering += CompositionTarget_Rendering;
 		}
@@ -297,15 +334,20 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		if (image == null)
 			return;
 
-		double x = Canvas.GetLeft(image);
+		if (image.Rotation < 359.9)
+			image.Rotation += 1.0f; // 1 degree per frame
+		else
+            image.Rotation = 0.0f;
+
+        double x = Canvas.GetLeft(image);
 		double y = Canvas.GetTop(image);
 
 		// Update position
-		x += properties.XSpeed;
-		y += properties.YSpeed;
+        x += properties.XSpeed;
+        y += properties.YSpeed;
 
-		// Bounce off the edges
-		if (canvas.ActualWidth > 0)
+        // Bounce off the edges
+        if (canvas.ActualWidth > 0)
 		{
 			if (x < 0 || x > canvas.ActualWidth - properties.Width)
 			{
@@ -475,6 +517,14 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		// Update image position.
 		Canvas.SetLeft(image, x);
 		Canvas.SetTop(image, y);
+	}
+
+	bool CoinFlip()
+	{
+		if (Random.Shared.Next(0,2) == 1) 
+			return true;
+		
+		return false;
 	}
 }
 
