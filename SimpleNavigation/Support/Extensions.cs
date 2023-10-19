@@ -26,6 +26,14 @@ namespace SimpleNavigation
 {
     public static class Extensions
     {
+        public static bool CoinFlip()
+        {
+            if (Random.Shared.Next(0, 2) == 1)
+                return true;
+
+            return false;
+        }
+
         #region [UI Helpers]
         public static IEnumerable<T> GetDescendantsOfType<T>(this DependencyObject start) where T : DependencyObject
         {

@@ -12,6 +12,7 @@ namespace SimpleNavigation;
 
 public class ImageFileProps : INotifyPropertyChanged
 {
+    #region [Props]
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     public StorageFile ImageFile { get; }
@@ -29,10 +30,19 @@ public class ImageFileProps : INotifyPropertyChanged
                 // Which, in-turn, leads to an unhandled exception (KernelBase.dll) 0xC0000602: A fail fast exception occurred. Exception handlers will not be invoked and the process will be terminated immediately.
                 return string.IsNullOrEmpty(ImageProperties.Title) ? ImageName : ImageProperties.Title;
             }
+            catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions
+            {
+                String? s = rwe.WrappedException as String;
+                if (s != null)
+                {
+                    Debug.WriteLine($"ImageFileProps.get: {s}");
+                    Debug.WriteLine($"Caller ⇨ {Extensions.GetStackTrace(new StackTrace())}");
+                }
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine($"ImageFileProps.get: {ex.Message}");
-                Debug.WriteLine($"Caller: {Extensions.GetStackTrace(new StackTrace())}");
+                Debug.WriteLine($"Caller ⇨ {Extensions.GetStackTrace(new StackTrace())}");
             }
             return "Error";
         }
@@ -46,6 +56,10 @@ public class ImageFileProps : INotifyPropertyChanged
             }
         }
     }
+
+    /// <summary>
+    /// Used with the <see cref="Microsoft.UI.Xaml.Controls.RatingControl"/>.
+    /// </summary>
     public int ImageRating
     {
         get => (int)ImageProperties.Rating;
@@ -59,6 +73,7 @@ public class ImageFileProps : INotifyPropertyChanged
             }
         }
     }
+    #endregion
 
     public ImageFileProps(ImageProperties properties, StorageFile imageFile, string name, string type)
     {

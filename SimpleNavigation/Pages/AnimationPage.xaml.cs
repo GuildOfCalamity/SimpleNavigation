@@ -27,8 +27,11 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
     #region [Props]
 	double xSpeed = 4;
 	double ySpeed = 4;
+	const double Gravity = 0.35;
+	const double MaxGravitySpeed = 21;
 	DispatcherTimer? timer = null;
 	List<ImageProps> images = new();
+    List<Uri> assets = new();
 	bool use60FPS = true;
 	bool useBoundingBox = true;
 	bool insideUpdate = false;
@@ -48,6 +51,20 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? ""));
     }
 
+	private bool gravityEnable = false;
+	public bool GravityEnable
+	{
+		get => gravityEnable;
+		set
+		{
+			gravityEnable = value;
+			OnPropertyChanged();
+			// The magnet effect should not be coupled with the gravity system.
+			if (magneticEnable is true)
+				MagneticEnable = false;
+		}
+	}
+
 	private bool magneticEnable = false;
     public bool MagneticEnable
     {
@@ -56,9 +73,12 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
         {
             magneticEnable = value;
             OnPropertyChanged();
-            // The magnet effect is coupled with the collision system.
-            if (magneticEnable is true && collisionEnable is false)
+			// The magnet effect is coupled with the collision system.
+			if (magneticEnable is true && collisionEnable is false)
+			{
 				CollisionEnable = true;
+				GravityEnable = false;
+			}
         }
     }
 
@@ -75,9 +95,22 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
                 MagneticEnable = false;
         }
     }
-	#endregion
 
-	List<Uri> assets = new();
+    private int selectedAssetIdx = 0;
+    public int SelectedAssetIdx
+    {
+        get => selectedAssetIdx;
+        set
+        {
+            if (selectedAssetIdx != value)
+            {
+                selectedAssetIdx = value;
+                OnPropertyChanged();
+                PopulateCanvasImages(assets[selectedAssetIdx]);
+            }
+        }
+    }
+    #endregion
 
     public AnimationPage()
 	{
@@ -102,6 +135,8 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
         {
             assets.Add(new Uri($"ms-appx:///Assets/{Path.GetFileName(f)}"));
         }
+
+		cmbAssets.ItemsSource = assets;
     }
 
     /// <summary>
@@ -125,69 +160,80 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
         base.OnNavigatedTo(e);
     }
 
-    void AnimationPage_Loaded(object? sender, RoutedEventArgs e)
+	void PopulateCanvasImages(Uri? img)
 	{
-		bool reload = false;
-
-		if (timer != null || assets.Count == 0)
+		if (img == null)
 			return;
 
-		var img = assets[Random.Shared.Next(0, assets.Count)];
-
-		// Each time the page is loaded pick a new image to render.
-		if (images.Count > 0) 
-		{
+        // Clear the previous setup.
+        if (images.Count > 0)
+        {
             canvas.Children.Clear();
             images.Clear();
-			reload = true;
-		}
+        }
 
         // Up to 1250 images can be rendered without performance degradation.
-        for (int i = 0; i < 40; i++) 
-		{
-			int x = 1; int y = 1;
-			int w = 90; int h = 90;
+        for (int i = 0; i < 25; i++)
+        {
+            int x = 1; int y = 1;
+            int w = 90; int h = 90;
 
-			if (canvas.ActualWidth > 0)
-				x = Random.Shared.Next(1, (int)canvas.ActualWidth / 2);
-			else
-				x = Random.Shared.Next(1, w * 3);
+            if (canvas.ActualWidth > 0)
+                x = Random.Shared.Next(1, (int)canvas.ActualWidth / 2);
+            else
+                x = Random.Shared.Next(1, w * 3);
 
-			if (canvas.ActualHeight > 0)
-				y = Random.Shared.Next(1, (int)canvas.ActualHeight / 2);
-			else
-				y = Random.Shared.Next(1, h * 3);
+            if (canvas.ActualHeight > 0)
+                y = Random.Shared.Next(1, (int)canvas.ActualHeight / 2);
+            else
+                y = Random.Shared.Next(1, h * 3);
 
-			var prop = new ImageProps {
-				XCoord = x,	YCoord = y,
-				Width = (double)w,
-				Height = (double)h,
-				XSpeed = (double)Random.Shared.Next(1, 5),
-				YSpeed = (double)Random.Shared.Next(1, 5),
-				Name = $"Image #{i + 1}"
+            var prop = new ImageProps
+            {
+                XCoord = x,
+                YCoord = y,
+                Width = (double)w,
+                Height = (double)h,
+                XSpeed = (double)Random.Shared.Next(1, 5),
+                YSpeed = (double)Random.Shared.Next(1, 5),
+                Name = $"Image #{i + 1}"
             };
-			images.Add(prop);
+            images.Add(prop);
 
-			// Create Image element dynamically.
-			Image? image = new();
-			image.Source = new BitmapImage(img);
-			image.Width = prop.Width;
-			image.Height = prop.Height;
-			image.CenterPoint = new System.Numerics.Vector3(w / 2, h / 2, 0);
+            // Create Image element dynamically.
+            Image? image = new();
+            image.Source = new BitmapImage(img);
+            image.Width = prop.Width;
+            image.Height = prop.Height;
+			// Be sure to set the center point for rotation animations.
+            image.CenterPoint = new System.Numerics.Vector3(w / 2, h / 2, 0);
 
-			// Add image to canvas.
-			canvas.Children.Add(image);
-			
-			// Update image position based on random coords.
-			Canvas.SetLeft(image, x);
-			Canvas.SetTop(image, y);
+            // Add image to canvas.
+            canvas.Children.Add(image);
 
-			// Set tooltip for each Image element.
-			ToolTipService.SetToolTip(canvas.Children[i], prop.Name);
+            // Update image position based on random coords.
+            Canvas.SetLeft(image, x);
+            Canvas.SetTop(image, y);
+
+            // Set tooltip for each Image element.
+            ToolTipService.SetToolTip(canvas.Children[i], prop.Name);
+        }
+    }
+
+	/// <summary>
+	/// <see cref="Page"/> event.
+	/// </summary>
+    void AnimationPage_Loaded(object? sender, RoutedEventArgs e)
+	{
+		if (timer != null || assets.Count == 0 || canvas.Children.Count > 0)
+			return;
+
+		if (assets.Count > 0)
+		{
+			SelectedAssetIdx = Random.Shared.Next(0, assets.Count);
+			cmbAssets.Text = $"{assets[selectedAssetIdx]}";
+			PopulateCanvasImages(assets[selectedAssetIdx]);
 		}
-
-        if (images.Count > 0 && reload) 
-			return; 
 
         if (use60FPS)
 		{
@@ -203,6 +249,9 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		}
 	}
 
+    /// <summary>
+    /// <see cref="Page"/> event.
+    /// </summary>
     void AnimationPage_Unloaded(object sender, RoutedEventArgs e)
     {
 		if (images.Count > 0)
@@ -351,7 +400,8 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		{
 			if (x < 0 || x > canvas.ActualWidth - properties.Width)
 			{
-				properties.XSpeed *= -1;
+                // Reverse the X-axis speed.
+                properties.XSpeed *= -1;
 				x = Math.Clamp(x, 0, canvas.ActualWidth - properties.Width);
 			}
 		}
@@ -360,6 +410,7 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		{
 			if (y < 0 || y > canvas.ActualHeight - properties.Height)
 			{
+				// Reverse the Y-axis speed.
 				properties.YSpeed *= -1;
 				y = Math.Clamp(y, 0, canvas.ActualHeight - properties.Height);
 			}
@@ -448,8 +499,19 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
             image.Opacity = 0.65;
         }
 
-        // Update image position.
-        Canvas.SetLeft(image, x);
+		if (GravityEnable)
+		{
+			// Apply gravity if enabled
+			properties.YSpeed += Gravity;
+			// Clamp the gravity speed
+			properties.YSpeed = Math.Min(properties.YSpeed, MaxGravitySpeed);
+			// Poke it if no activity
+			if (properties.YSpeed > 0 && properties.YSpeed < 0.151 && (y >= canvas.ActualHeight - properties.Height))
+				properties.YSpeed = MaxGravitySpeed  * -1;
+		}
+
+		// Update image position.
+		Canvas.SetLeft(image, x);
 		Canvas.SetTop(image, y);
 
 		// Update image properties.
@@ -517,14 +579,6 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		// Update image position.
 		Canvas.SetLeft(image, x);
 		Canvas.SetTop(image, y);
-	}
-
-	bool CoinFlip()
-	{
-		if (Random.Shared.Next(0,2) == 1) 
-			return true;
-		
-		return false;
 	}
 }
 

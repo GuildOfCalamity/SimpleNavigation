@@ -23,7 +23,6 @@ using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.UI.Popups;
 using Windows.UI.ViewManagement;
-using Windows.UI.WindowManagement;
 
 namespace SimpleNavigation;
 

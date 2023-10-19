@@ -27,6 +27,14 @@
                 x:Name="cbMagnetic"
                 Content="Magnetic force"
                 IsChecked="{x:Bind MagneticEnable, Mode=TwoWay}" />
+            <CheckBox
+                x:Name="cbGravity"
+                Content="Gravity"
+                IsChecked="{x:Bind GravityEnable, Mode=TwoWay}" />
+            <ComboBox
+                x:Name="cmbAssets"
+                MinWidth="250"
+                SelectedIndex="{x:Bind SelectedAssetIdx, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
         </StackPanel>
         <Canvas x:Name="canvas" Grid.Row="1" />
     </Grid>
