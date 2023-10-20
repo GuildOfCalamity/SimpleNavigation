@@ -27,8 +27,9 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
     #region [Props]
 	double xSpeed = 4;
 	double ySpeed = 4;
-	const double Gravity = 0.35;
-	const double MaxGravitySpeed = 21;
+	const int maxObjects = 21;
+	const double gravityFactor = 0.5;
+    const double maxGravitySpeed = 25;
 	DispatcherTimer? timer = null;
 	List<ImageProps> images = new();
     List<Uri> assets = new();
@@ -57,27 +58,28 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		get => gravityEnable;
 		set
 		{
-			gravityEnable = value;
-			OnPropertyChanged();
-			// The magnet effect should not be coupled with the gravity system.
-			if (magneticEnable is true)
-				MagneticEnable = false;
+			if (gravityEnable != value)
+			{
+				gravityEnable = value;
+				OnPropertyChanged();
+				if (!validating)
+					ValidateCombination();
+			}
 		}
 	}
 
-	private bool magneticEnable = false;
+    private bool magneticEnable = false;
     public bool MagneticEnable
     {
         get => magneticEnable;
         set
         {
-            magneticEnable = value;
-            OnPropertyChanged();
-			// The magnet effect is coupled with the collision system.
-			if (magneticEnable is true && collisionEnable is false)
+			if (magneticEnable != value)
 			{
-				CollisionEnable = true;
-				GravityEnable = false;
+				magneticEnable = value;
+				OnPropertyChanged();
+				if (!validating)
+					ValidateCombination();
 			}
         }
     }
@@ -88,11 +90,13 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
         get => collisionEnable;
         set
         {
-            collisionEnable = value;
-            OnPropertyChanged();
-            // The magnet effect is coupled with the collision system.
-            if (collisionEnable is false && magneticEnable is true)
-                MagneticEnable = false;
+			if (collisionEnable != value)
+			{
+				collisionEnable = value;
+				OnPropertyChanged();
+				if (!validating)
+					ValidateCombination();
+			}
         }
     }
 
@@ -173,7 +177,7 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
         }
 
         // Up to 1250 images can be rendered without performance degradation.
-        for (int i = 0; i < 25; i++)
+        for (int i = 0; i < maxObjects; i++)
         {
             int x = 1; int y = 1;
             int w = 90; int h = 90;
@@ -196,7 +200,9 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
                 Height = (double)h,
                 XSpeed = (double)Random.Shared.Next(1, 5),
                 YSpeed = (double)Random.Shared.Next(1, 5),
-                Name = $"Image #{i + 1}"
+				Rotation = (float)Random.Shared.Next(1, 5) + 0.1f,
+				Clockwise = Extensions.CoinFlip(),
+				Name = $"Image #{i + 1}"
             };
             images.Add(prop);
 
@@ -383,26 +389,36 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		if (image == null)
 			return;
 
-		if (image.Rotation < 359.9)
-			image.Rotation += 1.0f; // 1 degree per frame
-		else
+		// Update rotation.
+		if (properties.Clockwise && image.Rotation < 359.9)
+			image.Rotation += properties.Rotation;
+        else if (properties.Clockwise && image.Rotation > 359.9)
             image.Rotation = 0.0f;
+        else if (!properties.Clockwise && image.Rotation > 0)
+            image.Rotation -= properties.Rotation;
+        else if (!properties.Clockwise && image.Rotation <= 0)
+            image.Rotation = 360.0f;
 
         double x = Canvas.GetLeft(image);
 		double y = Canvas.GetTop(image);
 
-		// Update position
+		// Update position.
         x += properties.XSpeed;
         y += properties.YSpeed;
 
-        // Bounce off the edges
+        // Bounce off the edges.
         if (canvas.ActualWidth > 0)
 		{
 			if (x < 0 || x > canvas.ActualWidth - properties.Width)
 			{
+				if (x < 0)
+					properties.Clockwise = true;
+				if (x > canvas.ActualWidth - properties.Width)
+					properties.Clockwise = false;
+
                 // Reverse the X-axis speed.
                 properties.XSpeed *= -1;
-				x = Math.Clamp(x, 0, canvas.ActualWidth - properties.Width);
+                x = Math.Clamp(x, 0, canvas.ActualWidth - properties.Width);
 			}
 		}
 
@@ -412,13 +428,16 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 			{
 				// Reverse the Y-axis speed.
 				properties.YSpeed *= -1;
-				y = Math.Clamp(y, 0, canvas.ActualHeight - properties.Height);
+                y = Math.Clamp(y, 0, canvas.ActualHeight - properties.Height);
+				// Add attenuation for each bounce (friction)
+				if (GravityEnable && (properties.YSpeed <= -2))
+					properties.YSpeed += Random.Shared.NextDouble() + (gravityFactor * 4.5);
 			}
 		}
 		
 		if (collisionEnable)
 		{
-			image.Opacity = 0.9;
+			image.Opacity = 0.99;
 
 			if (!magneticEnable)
 			{
@@ -496,19 +515,36 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		{
 			// Since the images will be passing in front of or behind
 			// each other we'll want the user to be able to see them.
-            image.Opacity = 0.65;
+            image.Opacity = 0.68;
         }
 
-		if (GravityEnable)
+		if (gravityEnable)
 		{
-			// Apply gravity if enabled
-			properties.YSpeed += Gravity;
-			// Clamp the gravity speed
-			properties.YSpeed = Math.Min(properties.YSpeed, MaxGravitySpeed);
-			// Poke it if no activity
-			if (properties.YSpeed > 0 && properties.YSpeed < 0.151 && (y >= canvas.ActualHeight - properties.Height))
-				properties.YSpeed = MaxGravitySpeed  * -1;
-		}
+			// Apply gravity if enabled.
+			properties.YSpeed += gravityFactor;
+			
+			// Clamp the gravity speed.
+			properties.YSpeed = Math.Min(properties.YSpeed, maxGravitySpeed);
+
+			// If collisions are not enabled then we'll check for stagnant objects.
+			if (!collisionEnable)
+			{
+				if (properties.YSpeed >= 0 && properties.YSpeed < 1.01 && (y >= canvas.ActualHeight - (properties.Height + 1)))
+				{
+					var factor = ((canvas.ActualHeight / properties.Height) * 2.9) + 0.5;
+                    properties.YSpeed = Math.Min(factor, maxGravitySpeed) * -1;
+					// Help images that are closely overlaid by adding a random X component.
+					if (properties.XSpeed > 0 && properties.XSpeed < 3 && Extensions.CoinFlip())
+						properties.XSpeed += (double)Random.Shared.Next(0, 5);
+					else if (properties.XSpeed < 0 && properties.XSpeed > -3 && Extensions.CoinFlip())
+						properties.XSpeed -= (double)Random.Shared.Next(0, 5);
+					else if (properties.XSpeed > 3 && Extensions.CoinFlip())
+						properties.XSpeed -= (double)Random.Shared.Next(0, 3);
+					else if (properties.XSpeed < -3 && Extensions.CoinFlip())
+						properties.XSpeed += (double)Random.Shared.Next(0, 3);
+				}
+			}
+        }
 
 		// Update image position.
 		Canvas.SetLeft(image, x);
@@ -580,6 +616,39 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 		Canvas.SetLeft(image, x);
 		Canvas.SetTop(image, y);
 	}
+
+    static bool validating = false;
+    void ValidateCombination()
+    {
+        try
+        {
+            validating = true;
+
+			// The magnet effect is coupled with the collision system.
+			if (magneticEnable is true && collisionEnable is false)
+			{
+				CollisionEnable = true;
+                // The magnet effect should not be coupled with the gravity system.
+                GravityEnable = false;
+            }
+            
+			if (magneticEnable is true && gravityEnable is true)
+			{
+                // The magnet effect should not be coupled with the gravity system.
+                GravityEnable = false;
+            }
+
+            if (magneticEnable is true && collisionEnable is true && gravityEnable is true)
+            {
+                // The magnet effect should not be coupled with the gravity system.
+                GravityEnable = false;
+            }
+        }
+        finally
+        {
+            validating = false;
+        }
+    }
 }
 
 /// <summary>
@@ -588,7 +657,9 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 public class ImageProps
 {
 	public int Bangs { get; set; }
-	public string? Name { get; set; }
+	public bool Clockwise { get; set; }
+	public float Rotation { get; set; }
+    public string? Name { get; set; }
 	public double XCoord { get; set; }
 	public double YCoord { get; set; }
 	public double XSpeed { get; set; }
