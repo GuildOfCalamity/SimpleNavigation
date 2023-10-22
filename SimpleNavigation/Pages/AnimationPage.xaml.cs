@@ -27,9 +27,9 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
     #region [Props]
 	double xSpeed = 4;
 	double ySpeed = 4;
-	const int maxObjects = 21;
+	const int maxObjects = 30;
 	const double gravityFactor = 0.5;
-    const double maxGravitySpeed = 25;
+    const double maxGravitySpeed = 26;
 	DispatcherTimer? timer = null;
 	List<ImageProps> images = new();
     List<Uri> assets = new();
@@ -451,7 +451,7 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 						double distance = Math.Sqrt(Math.Pow(x - otherX, 2) + Math.Pow(y - otherY, 2));
 
 						// Assuming images are square, change to appropriate width for non-square images.
-						if (distance < image.Width + 1)
+						if (distance < image.Width + 0.1)
 						{
 							// Record the collision.
 							otherImage.Bangs += 1;
@@ -468,6 +468,13 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 							double angle = Math.Atan2(y - otherY, x - otherX);
 							x = otherX + Math.Cos(angle) * properties.Width;
 							y = otherY + Math.Sin(angle) * properties.Width;
+
+							// Re-check
+							//distance = Math.Sqrt(Math.Pow(x - otherX, 2) + Math.Pow(y - otherY, 2));
+							//if (distance is still less than image width then do something)
+							//{
+							//
+							//}
 						}
 					}
 				}
@@ -531,17 +538,21 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 			{
 				if (properties.YSpeed >= 0 && properties.YSpeed < 1.01 && (y >= canvas.ActualHeight - (properties.Height + 1)))
 				{
-					var factor = ((canvas.ActualHeight / properties.Height) * 2.9) + 0.5;
-                    properties.YSpeed = Math.Min(factor, maxGravitySpeed) * -1;
-					// Help images that are closely overlaid by adding a random X component.
-					if (properties.XSpeed > 0 && properties.XSpeed < 3 && Extensions.CoinFlip())
-						properties.XSpeed += (double)Random.Shared.Next(0, 5);
-					else if (properties.XSpeed < 0 && properties.XSpeed > -3 && Extensions.CoinFlip())
-						properties.XSpeed -= (double)Random.Shared.Next(0, 5);
-					else if (properties.XSpeed > 3 && Extensions.CoinFlip())
-						properties.XSpeed -= (double)Random.Shared.Next(0, 3);
-					else if (properties.XSpeed < -3 && Extensions.CoinFlip())
-						properties.XSpeed += (double)Random.Shared.Next(0, 3);
+					// 5% chance to jump.
+					if (Random.Shared.Next(0, 100) >= 95)
+					{
+						var factor = ((canvas.ActualHeight / properties.Height) * 2.9) + 0.5;
+						properties.YSpeed = Math.Min(factor, maxGravitySpeed) * -1;
+						// Help images that are closely overlaid by adding a random X component.
+						if (properties.XSpeed > 0 && properties.XSpeed < 3 && Extensions.CoinFlip())
+							properties.XSpeed += (double)Random.Shared.Next(0, 5);
+						else if (properties.XSpeed < 0 && properties.XSpeed > -3 && Extensions.CoinFlip())
+							properties.XSpeed -= (double)Random.Shared.Next(0, 5);
+						else if (properties.XSpeed > 3 && Extensions.CoinFlip())
+							properties.XSpeed -= (double)Random.Shared.Next(0, 3);
+						else if (properties.XSpeed < -3 && Extensions.CoinFlip())
+							properties.XSpeed += (double)Random.Shared.Next(0, 3);
+					}
 				}
 			}
         }
