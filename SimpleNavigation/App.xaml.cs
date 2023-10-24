@@ -34,6 +34,8 @@ public partial class App : Application
     private Window? _window;
     private static UISettings _UISettings = new UISettings();
     public static Window? MainWindow { get; set; }
+    public static DisplayArea? MainDisplay { get; set; }
+    public static AppWindow? AppWin { get; set; }
     public static SystemState? State { get; set; }
     public static AssemblyAttributes? Attribs;
     public static bool IsClosing { get; set; } = false;
@@ -87,8 +89,9 @@ public partial class App : Application
         // Save the FrameworkElement for future content dialogs.
         App.MainRoot = _window.Content as FrameworkElement;
         App.MainWindow = _window;
+        App.WindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(_window);
 
-        var AppWin = GetAppWindow(_window);
+        AppWin = _window.GetAppWindow();
         if (AppWin != null)
         {
             // Unfortunately MS decided to remove the closing event from the
@@ -98,19 +101,24 @@ public partial class App : Application
             // NOTE: png to ico converter https://www.img2go.com/convert/png-to-ico
 
             if (App.IsPackaged)
-                AppWin.SetIcon(System.IO.Path.Combine(Windows.ApplicationModel.Package.Current.InstalledLocation.Path, "Assets/Win10Logo.ico"));
+                AppWin.SetIcon(System.IO.Path.Combine(Windows.ApplicationModel.Package.Current.InstalledLocation.Path, "Assets/Navigation.ico"));
             else
-                AppWin.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets/Win10Logo.ico"));
+                AppWin.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets/Navigation.ico"));
         }
+        
+        MainDisplay = _window.GetDisplayArea();
 
         _window.Activate();
-        
-        AppWin?.Resize(new Windows.Graphics.SizeInt32(1100, 700));
-        
-        CenterWindow(_window);
+        _window.ResizeWindow(1100, 700);
+        _window.CenterWindow();
 
         if (Debugger.IsAttached)
             DebugMode = true;
+
+        #region [Changing the current process priority]
+        //Process pro = Process.GetCurrentProcess();
+        //if (pro != null) { pro.PriorityClass = ProcessPriorityClass.Idle; }
+        #endregion
     }
 
     #region [Domain Events]
@@ -156,90 +164,6 @@ public partial class App : Application
     {
         Debug.WriteLine($"Unobserved task exception: {e.Exception}", $"{nameof(App)}");
         e.SetObserved(); // suppress and handle manually
-    }
-    #endregion
-
-    #region [Window Helpers]
-    /// <summary>
-    /// This code example demonstrates how to retrieve an AppWindow from a WinUI3 window.
-    /// The AppWindow class is available for any top-level HWND in your app.
-    /// AppWindow is available only to desktop apps (both packaged and unpackaged), it's not available to UWP apps.
-    /// https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/windowing/windowing-overview
-    /// https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.appwindow.create?view=windows-app-sdk-1.3
-    /// </summary>
-    public Microsoft.UI.Windowing.AppWindow? GetAppWindow(object window)
-    {
-        // Retrieve the window handle (HWND) of the current (XAML) WinUI3 window.
-        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-
-        // For other classes to use.
-        App.WindowHandle = hWnd;
-
-        // Retrieve the WindowId that corresponds to hWnd.
-        Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-
-        // Lastly, retrieve the AppWindow for the current (XAML) WinUI3 window.
-        Microsoft.UI.Windowing.AppWindow appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
-
-        if (appWindow != null)
-        {
-            // You now have an AppWindow object, and you can call its methods to manipulate the window.
-            // As an example, let's change the title text of the window: appWindow.Title = "Title text updated via AppWindow!";
-            //appWindow.Move(new Windows.Graphics.PointInt32(200, 100));
-            appWindow?.MoveAndResize(new Windows.Graphics.RectInt32(250, 100, 1300, 800), Microsoft.UI.Windowing.DisplayArea.Primary);
-        }
-
-        return appWindow;
-    }
-
-    /// <summary>
-    /// Centers a <see cref="Microsoft.UI.Xaml.Window"/> based on the <see cref="Microsoft.UI.Windowing.DisplayArea"/>.
-    /// </summary>
-    public void CenterWindow(Window window)
-    {
-        try
-        {
-            System.IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-            Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-            if (Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId) is Microsoft.UI.Windowing.AppWindow appWindow &&
-                Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(windowId, Microsoft.UI.Windowing.DisplayAreaFallback.Nearest) is Microsoft.UI.Windowing.DisplayArea displayArea)
-            {
-                Windows.Graphics.PointInt32 CenteredPosition = appWindow.Position;
-                CenteredPosition.X = (displayArea.WorkArea.Width - appWindow.Size.Width) / 2;
-                CenteredPosition.Y = (displayArea.WorkArea.Height - appWindow.Size.Height) / 2;
-                appWindow.Move(CenteredPosition);
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.Name}: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// The <see cref="Microsoft.UI.Windowing.DisplayArea"/> exposes properties such as:
-    /// OuterBounds     (Rect32)
-    /// WorkArea.Width  (int)
-    /// WorkArea.Height (int)
-    /// IsPrimary       (bool)
-    /// DisplayId.Value (ulong)
-    /// </summary>
-    /// <param name="window"></param>
-    /// <returns><see cref="DisplayArea"/></returns>
-    public Microsoft.UI.Windowing.DisplayArea? GetDisplayArea(Window window)
-    {
-        try
-        {
-            System.IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-            Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-            var da = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(windowId, Microsoft.UI.Windowing.DisplayAreaFallback.Nearest);
-            return da;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"GetDisplayArea: {ex.Message}");
-            return null;
-        }
     }
     #endregion
 

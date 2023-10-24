@@ -21,17 +21,148 @@ using Windows.Storage;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 using Windows.Management.Deployment;
+using System.Collections;
+using System.Threading;
+using Microsoft.UI.Windowing;
+using Microsoft.UI;
 
 namespace SimpleNavigation
 {
     public static class Extensions
     {
-        public static bool CoinFlip()
-        {
-            if (Random.Shared.Next(0, 2) == 1)
-                return true;
+        /// <summary>
+        /// A random <see cref="Boolean"/> generator.
+        /// </summary>
+        public static bool CoinFlip() => (Random.Shared.Next(100) > 49) ? true : false;
 
-            return false;
+        /// <summary>
+        /// Determines if two <see cref="double"/>s are within a margin of each other.
+        /// </summary>
+        public static bool IsSimilarTo(this double first, double second, double margin) => Math.Abs(first - second) <= margin;
+
+        /// <summary>
+        /// Randomly shuffle <see cref="IList{T}"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        public static void Shuffle<T>(this IList<T> list)
+        {
+            int n = list.Count;
+
+            for (int i = list.Count - 1; i > 1; i--)
+            {
+                int rnd = Random.Shared.Next(i + 1);
+                T value = list[rnd];
+                list[rnd] = list[i];
+                list[i] = value;
+            }
+        }
+
+        /// <summary>
+        /// Basic key/pswd generator for unique IDs.
+        /// This employs the standard MS key table which accounts
+        /// for the 36 Latin letters and Arabic numerals used in
+        /// most Western European languages...
+        /// 24 chars are favored: 2346789 BCDFGHJKMPQRTVWXY
+        /// 12 chars are avoided: 015 AEIOU LNSZ
+        /// Only 2 chars are occasionally mistaken: 8 and B (depends on the font).
+        /// The base of possible codes is large (about 3.2 * 10^34).
+        /// </summary>
+        public static string KeyGen(int pLength = 6, long pSeed = 0)
+        {
+            const string pwChars = "2346789BCDFGHJKMPQRTVWXY";
+            if (pLength < 6)
+                pLength = 6; // minimum of 6 characters
+
+            char[] charArray = pwChars.Distinct().ToArray();
+
+            if (pSeed == 0)
+            {
+                pSeed = DateTime.Now.Ticks;
+                Thread.Sleep(1); // allow a tick to go by (if hammering)
+            }
+
+            var result = new char[pLength];
+            var rng = new Random((int)pSeed);
+
+            for (int x = 0; x < pLength; x++)
+                result[x] = pwChars[rng.Next() % pwChars.Length];
+
+            return (new string(result));
+        }
+
+        /// <summary>
+        /// XML formatting helper.
+        /// </summary>
+        /// <param name="xml">input string</param>
+        /// <returns>formatted string</returns>
+        public static string PrettyXml(this string xml)
+        {
+            try
+            {
+                var stringBuilder = new StringBuilder();
+                var element = System.Xml.Linq.XElement.Parse(xml);
+                var settings = new System.Xml.XmlWriterSettings();
+                settings.OmitXmlDeclaration = true;
+                settings.Indent = true;
+                settings.NewLineOnAttributes = true;
+                // XmlWriter offers a StringBuilder as an output.
+                using (var xmlWriter = System.Xml.XmlWriter.Create(stringBuilder, settings))
+                {
+                    element.Save(xmlWriter);
+                }
+
+                return stringBuilder.ToString();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PrettyXml: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Debugging helper method.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns>type name then base type for the object</returns>
+        public static string NameOf(this object obj) => $"{obj.GetType().Name} => {obj.GetType().BaseType?.Name}";
+
+        /// <summary>
+        /// var vm = frame.GetPageViewModel();
+        /// </summary>
+        public static object? GetPageViewModel(this Frame frame)
+        { 
+            return frame?.Content?.GetType().GetProperty("ViewModel")?.GetValue(frame.Content, null);
+        }
+
+        /// <summary>
+        /// Opens the specified file without blocking the current thread.
+        /// </summary>
+        /// <param name="filePath">full path including file name</param>
+        /// <param name="arguments">optional arguments</param>
+        public static void OpenFile(string filePath, string arguments = "")
+        {
+            if (System.IO.File.Exists(filePath))
+            {
+                try
+                {
+                    Task.Run(() => {
+                        System.Diagnostics.ProcessStartInfo startInfo = new()
+                        {
+                            FileName = filePath,
+                            Arguments = arguments,
+                            UseShellExecute = true // <-- very important! 
+                        };
+                        System.Diagnostics.Process.Start(startInfo);
+                    });
+                }
+                catch (Exception ex) { Debug.WriteLine($"OpenFile: {ex.Message}"); }
+            }
+            else 
+            { 
+                Debug.WriteLine($"OpenFile: '{System.IO.Path.GetFileName(filePath)}' does not exist."); 
+            }
         }
 
         #region [UI Helpers]
@@ -166,22 +297,297 @@ namespace SimpleNavigation
 				Debug.WriteLine($"[FrameworkElement] {controlType.FullName}");
 			}
 		}
-
-		/// <summary>
-		/// Returns the field names and their types for a specific class.
-		/// </summary>
-		/// <param name="myType"></param>
-		/// <example>
-		/// var dict = ReflectFieldInfo(typeof(MainPage));
-		/// </example>
-		public static Dictionary<string, Type> ReflectFieldInfo(Type myType)
-		{
-			Dictionary<string, Type> results = new();
-			FieldInfo[] myFieldInfo = myType.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
-			for (int i = 0; i < myFieldInfo.Length; i++) { results[myFieldInfo[i].Name] = myFieldInfo[i].FieldType; }
-			return results;
-		}
 		#endregion
+
+        #region [Window Helpers]
+        /// <summary>
+        /// Configures whether the window should always be displayed on top of other windows or not
+        /// </summary>
+        /// <remarks>The presenter must be an overlapped presenter.</remarks>
+        /// <exception cref="NotSupportedException">Throw if the AppWindow Presenter isn't an overlapped presenter.</exception>
+        /// <param name="enable">Whether to display on top</param>
+        public static void SetIsAlwaysOnTop(bool enable) => UpdateOverlappedPresenter((c) => c.IsAlwaysOnTop = enable);
+
+        /// <summary>
+        /// Gets a value indicating whether this window is on top or not.
+        /// </summary>
+        /// <returns><c>True</c> if the overlapped presenter is on top, otherwise <c>false</c>.</returns>
+        public static bool GetIsAlwaysOnTop() => GetOverlappedPresenterValue((c) => c?.IsAlwaysOnTop ?? false);
+
+        /// <summary>
+        /// Enables or disables the ability to resize the window.
+        /// </summary>
+        /// <remarks>The presenter must be an overlapped presenter.</remarks>
+        /// <exception cref="NotSupportedException">Throw if the AppWindow Presenter isn't an overlapped presenter.</exception>
+        /// <param name="enable"></param>
+        public static void SetIsResizable(bool enable) => UpdateOverlappedPresenter((c) => c.IsResizable = enable);
+
+        /// <summary>
+        /// Gets a value indicating whether this resizable or not.
+        /// </summary>
+        /// <returns><c>True</c> if the overlapped presenter is resizeable, otherwise <c>false</c>.</returns>
+        public static bool GetIsResizable() => GetOverlappedPresenterValue((c) => c?.IsResizable ?? false);
+
+        /// <summary>
+        /// </summary>
+        /// <remarks>The presenter must be an overlapped presenter.</remarks>
+        /// <exception cref="NotSupportedException">Throw if the AppWindow Presenter isn't an overlapped presenter.</exception>
+        /// <param name="enable"><c>true</c> if this window should be maximizable.</param>
+        public static void SetIsMaximizable(bool enable) => UpdateOverlappedPresenter((c) => c.IsMaximizable = enable);
+
+        /// <summary>
+        /// Gets a value indicating whether this window is maximizeable or not.
+        /// </summary>
+        /// <returns><c>True</c> if the overlapped presenter is on maximizable, otherwise <c>false</c>.</returns>
+        public static bool GetIsMaximizable() => GetOverlappedPresenterValue((c) => c?.IsMaximizable ?? false);
+
+        /// <summary>
+        /// </summary>
+        /// <remarks>The presenter must be an overlapped presenter.</remarks>
+        /// <exception cref="NotSupportedException">Throw if the AppWindow Presenter isn't an overlapped presenter.</exception>
+        /// <param name="enable"><c>true</c> if this window should be minimizable.</param>
+        public static void SetIsMinimizable(bool enable) => UpdateOverlappedPresenter((c) => c.IsMinimizable = enable);
+
+        /// <summary>
+        /// Gets a value indicating whether this window is minimizeable or not.
+        /// </summary>
+        /// <returns><c>True</c> if the overlapped presenter is on minimizable, otherwise <c>false</c>.</returns>
+        public static bool GetIsMinimizable() => GetOverlappedPresenterValue((c) => c?.IsMinimizable ?? false);
+
+        /// <summary>
+        /// Enables or disables showing the window in the task switchers.
+        /// </summary>
+        /// <param name="enable"><c>true</c> if this window should be shown in the task switchers, otherwise <c>false</c>.</param>
+        public static void SetIsShownInSwitchers(bool enable)
+        {
+            if (App.MainWindow is null)
+                throw new ArgumentNullException($"'{nameof(App.MainWindow)}' must be initialized before using this method.");
+
+            App.MainWindow.GetAppWindow().IsShownInSwitchers = enable;
+        }
+
+        /// <summary>
+        /// Sets the window presenter kind used.
+        /// </summary>
+        /// <param name="kind"><see cref="AppWindowPresenterKind"/></param>
+        public static void SetWindowPresenter(AppWindowPresenterKind kind)
+        {
+            if (App.MainWindow is null)
+                throw new ArgumentNullException($"'{nameof(App.MainWindow)}' must be initialized before using this method.");
+
+            App.MainWindow.GetAppWindow().SetPresenter(kind);
+        }
+
+        /// <summary>
+        /// Maximizes the window.
+        /// </summary>
+        /// <remarks>The presenter must be an overlapped presenter.</remarks>
+        /// <exception cref="NotSupportedException">Throw if the AppWindow Presenter isn't an overlapped presenter.</exception>
+        public static void MaximizeWindow() => UpdateOverlappedPresenter((c) => c.Maximize());
+
+        /// <summary>
+        /// Minimizes the window and activates the next top-level window in the Z order.
+        /// </summary>
+        /// <remarks>The presenter must be an overlapped presenter.</remarks>
+        /// <exception cref="NotSupportedException">Throw if the AppWindow Presenter isn't an overlapped presenter.</exception>
+        public static void MinimizeWindow() => UpdateOverlappedPresenter((c) => c.Minimize());
+
+        /// <summary>
+        /// Activates and displays the window. If the window is minimized or 
+        /// maximized, the system restores it to its original size and position.
+        /// </summary>
+        /// <remarks>The presenter must be an overlapped presenter.</remarks>
+        /// <exception cref="NotSupportedException">Throw if the AppWindow Presenter isn't an overlapped presenter.</exception>
+        public static void RestoreWindow() => UpdateOverlappedPresenter((c) => c.Restore());
+
+        /// <summary>
+        /// Gets the background color for the title bar and all its buttons and their states.
+        /// </summary>
+        /// <param name="window">window</param>
+        /// <param name="color">color</param>
+        public static void SetTitleBarBackgroundColors(this Microsoft.UI.Xaml.Window window, Windows.UI.Color color)
+        {
+            var appWindow = window.GetAppWindow();
+            if (AppWindowTitleBar.IsCustomizationSupported())
+            {
+                appWindow.TitleBar.ButtonBackgroundColor = color;
+                appWindow.TitleBar.BackgroundColor = color;
+                appWindow.TitleBar.ButtonInactiveBackgroundColor = color;
+                appWindow.TitleBar.ButtonPressedBackgroundColor = color;
+                appWindow.TitleBar.InactiveBackgroundColor = color;
+            }
+        }
+
+        /// <summary>
+        /// Helper method for SetIs___ methods.
+        /// An overlapped window has a title bar and a border.
+        /// An OVERLAPPED window is the same as a TILEDWINDOW.
+        /// </summary>
+        private static void UpdateOverlappedPresenter(Action<OverlappedPresenter> action)
+        {
+            if (App.MainWindow is null)
+                throw new ArgumentNullException($"'{nameof(App.MainWindow)}' must be initialized before using this method.");
+
+            var appWindow = App.MainWindow.GetAppWindow();
+            if (appWindow.Presenter is OverlappedPresenter overlapped)
+                action(overlapped);
+            else
+                throw new NotSupportedException($"Not supported with a {appWindow.Presenter.Kind} presenter.");
+        }
+
+        /// <summary>
+        /// Helper method for GetIs___ methods.
+        /// </summary>
+        private static T GetOverlappedPresenterValue<T>(Func<OverlappedPresenter?, T> action)
+        {
+            if (App.MainWindow is null)
+                throw new ArgumentNullException($"'{nameof(App.MainWindow)}' must be initialized before using this method.");
+
+            var appWindow = App.MainWindow.GetAppWindow();
+            return action(appWindow.Presenter as OverlappedPresenter);
+        }
+
+        /// <summary>
+        /// This code example demonstrates how to retrieve an AppWindow from a WinUI3 window.
+        /// The AppWindow class is available for any top-level HWND in your app.
+        /// AppWindow is available only to desktop apps (both packaged and unpackaged), it's not available to UWP apps.
+        /// https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/windowing/windowing-overview
+        /// https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.appwindow.create?view=windows-app-sdk-1.3
+        /// </summary>
+        public static Microsoft.UI.Windowing.AppWindow? GetAppWindow(this object window)
+        {
+            // Retrieve the window handle (HWND) of the current (XAML) WinUI3 window.
+            var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+            // Retrieve the WindowId that corresponds to hWnd.
+            Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
+            // Lastly, retrieve the AppWindow for the current (XAML) WinUI3 window.
+            return Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
+        }
+
+        /// <summary>
+        /// Resizes a <see cref="Microsoft.UI.Xaml.Window window"/>.
+        /// </summary>
+        /// <param name="window"><see cref="Microsoft.UI.Xaml.Window window"/></param>
+        /// <param name="width">desired width</param>
+        /// <param name="height">desired height</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static void ResizeWindow(this Microsoft.UI.Xaml.Window window, int width, int height)
+        {
+            if (window is null)
+                throw new ArgumentNullException($"'{nameof(window)}' must be initialized before using this method.");
+
+            var appWindow = window.GetAppWindow();
+            appWindow?.Resize(new Windows.Graphics.SizeInt32((width > 0) ? width : 100, (height > 0) ? height : 100));
+        }
+
+        /// <summary>
+        /// Moves and resizes a <see cref="Microsoft.UI.Xaml.Window window"/>.
+        /// </summary>
+        /// <param name="window"><see cref="Microsoft.UI.Xaml.Window window"/></param>
+        /// <param name="x">desired X coordinate</param>
+        /// <param name="y">desired Y coordinate</param>
+        /// <param name="width">desired width</param>
+        /// <param name="height">desired height</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static void MoveAndResizeWindow(this Microsoft.UI.Xaml.Window window, int x, int y, int width, int height)
+        {
+            if (window is null)
+                throw new ArgumentNullException($"'{nameof(window)}' must be initialized before using this method.");
+
+            var appWindow = window.GetAppWindow();
+            appWindow?.Move(new Windows.Graphics.PointInt32(x, y));
+            appWindow?.Resize(new Windows.Graphics.SizeInt32((width > 0) ? width : 100, (height > 0) ? height : 100));
+        }
+
+        /// <summary>
+        /// Centers a <see cref="Microsoft.UI.Xaml.Window"/> based on the <see cref="Microsoft.UI.Windowing.DisplayArea"/>.
+        /// </summary>
+        public static void CenterWindow(this Microsoft.UI.Xaml.Window window)
+        {
+            try
+            {
+                IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
+                if (Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId) is Microsoft.UI.Windowing.AppWindow appWindow &&
+                    Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(windowId, Microsoft.UI.Windowing.DisplayAreaFallback.Nearest) is Microsoft.UI.Windowing.DisplayArea displayArea)
+                {
+                    Windows.Graphics.PointInt32 CenteredPosition = appWindow.Position;
+                    CenteredPosition.X = (displayArea.WorkArea.Width - appWindow.Size.Width) / 2;
+                    CenteredPosition.Y = (displayArea.WorkArea.Height - appWindow.Size.Height) / 2;
+                    appWindow.Move(CenteredPosition);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.Name}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// The <see cref="Microsoft.UI.Windowing.DisplayArea"/> exposes properties such as:
+        /// OuterBounds     (Rect32)
+        /// WorkArea.Width  (int)
+        /// WorkArea.Height (int)
+        /// IsPrimary       (bool)
+        /// DisplayId.Value (ulong)
+        /// </summary>
+        /// <param name="window"></param>
+        /// <returns><see cref="DisplayArea"/></returns>
+        public static Microsoft.UI.Windowing.DisplayArea? GetDisplayArea(this Microsoft.UI.Xaml.Window window)
+        {
+            try
+            {
+                System.IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                Microsoft.UI.WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
+                var da = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(windowId, Microsoft.UI.Windowing.DisplayAreaFallback.Nearest);
+                return da;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetDisplayArea: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the native HWND pointer handle for the window
+        /// </summary>
+        /// <param name="window">The window to return the handle for</param>
+        /// <returns>HWND handle</returns>
+        public static IntPtr GetWindowHandle(this Microsoft.UI.Xaml.Window window)
+        { 
+            return window is null ? throw new ArgumentNullException(nameof(window)) : WinRT.Interop.WindowNative.GetWindowHandle(window);
+        }
+
+        /// <summary>
+        /// Gets the window HWND handle from a Window ID.
+        /// </summary>
+        /// <param name="windowId">Window ID to get handle from</param>
+        /// <returns>Window HWND handle</returns>
+        public static IntPtr GetWindowHandle(this WindowId windowId)
+        {
+            IntPtr hwnd;
+            GetWindowHandleFromWindowId(windowId, out hwnd);
+            return hwnd;
+        }
+
+        /// <summary>
+        /// Gets the AppWindow from an HWND
+        /// </summary>
+        /// <param name="hwnd"></param>
+        /// <returns>AppWindow</returns>
+        public static AppWindow GetAppWindowFromWindowHandle(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero)
+                throw new ArgumentNullException(nameof(hwnd));
+            WindowId windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
+            return AppWindow.GetFromWindowId(windowId);
+        }
+
+        [DllImport("Microsoft.Internal.FrameworkUdk.dll", EntryPoint = "Windowing_GetWindowHandleFromWindowId", CharSet = CharSet.Unicode)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+        private static extern IntPtr GetWindowHandleFromWindowId(WindowId windowId, out IntPtr result);
+        #endregion
 
 		#region [Window Tracking]
 		static private List<Window> _activeWindows = new List<Window>();
@@ -556,9 +962,71 @@ namespace SimpleNavigation
             return strText;
         }
 
+        // Matches non-conforming unicode chars
+        // https://mnaoumov.wordpress.com/2014/06/14/stripping-invalid-characters-from-utf-16-strings/
+        private static readonly Regex _nonConformingUnicode = new Regex("([\ud800-\udbff](?![\udc00-\udfff]))|((?<![\ud800-\udbff])[\udc00-\udfff])|(\ufffd)");
+
         /// <summary>
-        /// ExampleTextSample => Example Text Sample
+        /// Removes the diacritics character from the strings.
         /// </summary>
+        /// <param name="text">The string to act on.</param>
+        /// <returns>The string without diacritics character.</returns>
+        public static string RemoveDiacritics(this string text)
+        {
+            string withDiactritics = _nonConformingUnicode
+                .Replace(text, string.Empty)
+                .Normalize(NormalizationForm.FormD);
+
+            var withoutDiactritics = new StringBuilder();
+            foreach (char c in withDiactritics)
+            {
+                UnicodeCategory uc = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (uc != UnicodeCategory.NonSpacingMark)
+                {
+                    withoutDiactritics.Append(c);
+                }
+            }
+
+            return withoutDiactritics.ToString().Normalize(NormalizationForm.FormC);
+        }
+
+        /// <summary>
+        /// Checks whether or not the specified string has diacritics in it.
+        /// </summary>
+        /// <param name="text">The string to check.</param>
+        /// <returns>True if the string has diacritics, false otherwise.</returns>
+        public static bool HasDiacritics(this string text)
+        {
+            return !string.Equals(text, text.RemoveDiacritics(), StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Counts the number of occurrences of [needle] in the string.
+        /// </summary>
+        /// <param name="value">The haystack to search in.</param>
+        /// <param name="needle">The character to search for.</param>
+        /// <returns>The number of occurrences of the [needle] character.</returns>
+        public static int Count(this ReadOnlySpan<char> value, char needle)
+        {
+            var count = 0;
+            var length = value.Length;
+            for (var i = 0; i < length; i++)
+            {
+                if (value[i] == needle)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Helper method example using <see cref="StringBuilder"/>.
+        /// </summary>
+        /// <example>
+        /// ExampleTextSample => Example Text Sample
+        /// </example>
         /// <param name="input"></param>
         /// <returns>space delimited string</returns>
         public static string SeparateCamelCase(this string input)
@@ -578,6 +1046,85 @@ namespace SimpleNavigation
             }
 
             return result.ToString();
+        }
+
+        /// <summary>
+        /// Helper method example using <see cref="Regex"/>.
+        /// </summary>
+        /// <example>
+        /// ExampleTextSample => Example Text Sample
+        /// </example>
+        /// <param name="input"></param>
+        /// <returns>space delimited string</returns>
+        public static string SplitCamelCase(this string input)
+        {
+            return Regex.Replace(Regex.Replace(
+                    input,
+                    @"(\P{Ll})(\P{Ll}\p{Ll})",
+                    "$1 $2"
+                    ),
+                    @"(\p{Ll})(\P{Ll})",
+                    "$1 $2"
+            );
+        }
+
+        /// <summary>
+        /// Returns the field names and their types for a specific class.
+        /// </summary>
+        /// <param name="myType"></param>
+        /// <example>
+        /// var dict = ReflectFieldInfo(typeof(MainPage));
+        /// </example>
+        public static Dictionary<string, Type> ReflectFieldInfo(Type myType)
+        {
+            Dictionary<string, Type> results = new();
+            FieldInfo[] myFieldInfo = myType.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+            for (int i = 0; i < myFieldInfo.Length; i++) { results[myFieldInfo[i].Name] = myFieldInfo[i].FieldType; }
+            return results;
+        }
+
+        /// <summary>
+        /// Determines whether the value is contained in the source collection.
+        /// </summary>
+        /// <param name="source">An instance of the <see cref="IEnumerable{String}"/> interface.</param>
+        /// <param name="value">The value to look for in the collection.</param>
+        /// <param name="stringComparison">The string comparison.</param>
+        /// <returns>A value indicating whether the value is contained in the collection.</returns>
+        /// <exception cref="ArgumentNullException">The source is null.</exception>
+        public static bool Contains(this IEnumerable<string> source, ReadOnlySpan<char> value, StringComparison stringComparison)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+
+            if (source is IList<string> list)
+            {
+                int len = list.Count;
+                for (int i = 0; i < len; i++)
+                {
+                    if (value.Equals(list[i], stringComparison))
+                        return true;
+                }
+
+                return false;
+            }
+
+            foreach (string element in source)
+            {
+                if (value.Equals(element, stringComparison))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets an IEnumerable from a single item.
+        /// </summary>
+        /// <param name="item">The item to return.</param>
+        /// <typeparam name="T">The type of item.</typeparam>
+        /// <returns>The IEnumerable{T}.</returns>
+        public static IEnumerable<T> SingleItemAsEnumerable<T>(this T item)
+        {
+            yield return item;
         }
 
         /// <summary>
@@ -781,6 +1328,37 @@ namespace SimpleNavigation
         }
 
         /// <summary>
+        /// Uses an operator for the current and previous item.
+        /// Needs only a single iteration to process pairs and produce an output.
+        /// </summary>
+        /// <example>
+        /// var avg = collection.Pairwise((a, b) => (b.DateTime - a.DateTime)).Average(ts => ts.TotalMinutes);
+        /// </example>
+        public static IEnumerable<TResult> Pairwise<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TSource, TResult> resultSelector)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            if (resultSelector == null)
+                throw new ArgumentNullException(nameof(resultSelector));
+
+            return _(); IEnumerable<TResult> _()
+            {
+                using var e = source.GetEnumerator();
+
+                if (!e.MoveNext())
+                    yield break;
+
+                var previous = e.Current;
+                while (e.MoveNext())
+                {
+                    yield return resultSelector(previous, e.Current);
+                    previous = e.Current;
+                }
+            }
+        }
+
+        /// <summary>
         /// Clamping function for any value of type <see cref="IComparable{T}"/>.
         /// </summary>
         /// <param name="val">initial value</param>
@@ -814,14 +1392,6 @@ namespace SimpleNavigation
         /// </summary>
         public static float Lerp(this float start, float end, float amount = 0.5F) => start + (end - start) * amount;
 
-        public static bool RandomBoolean()
-        {
-            if (Random.Shared.Next(100) > 49)
-                return true;
-
-            return false;
-        }
-
         /// <summary>
         /// Converts long file size into typical browser file size.
         /// </summary>
@@ -848,13 +1418,60 @@ namespace SimpleNavigation
 			catch (PathTooLongException) { return true; }
 		}
 
-		/// <summary>
-		/// Display a readable sentence as to when that time happened.
-		/// e.g. "5 minutes ago" or "in 2 days"
-		/// </summary>
-		/// <param name="value"><see cref="DateTime"/>the past/future time to compare from now</param>
-		/// <returns>human friendly format</returns>
-		public static string ToReadableTime(this DateTime value, bool useUTC = false)
+        static bool IsValidPath(string path)
+        {
+            if ((File.GetAttributes(path) & System.IO.FileAttributes.ReparsePoint) == System.IO.FileAttributes.ReparsePoint)
+            {
+                Debug.WriteLine("'" + path + "' is a reparse point (skipped)");
+                return false;
+            }
+            if (!IsReadable(path))
+            {
+                Debug.WriteLine("'" + path + "' *ACCESS DENIED* (skipped)");
+                return false;
+            }
+            return true;
+        }
+
+        static bool IsReadable(string path)
+        {
+            try
+            {
+                var dn = Path.GetDirectoryName(path);
+                string[] test = Directory.GetDirectories(dn, "*.*", SearchOption.TopDirectoryOnly);
+            }
+            catch (UnauthorizedAccessException) { return false; }
+            catch (PathTooLongException) { return false; }
+            catch (IOException) { return false; }
+            return true;
+        }
+
+        /// <summary>
+        /// Determines the last <see cref="DriveType.Fixed"/> drive letter on a client machine.
+        /// </summary>
+        /// <returns>drive letter</returns>
+        public static string GetLastFixedDrive()
+        {
+            char lastLetter = 'C';
+            DriveInfo[] drives = DriveInfo.GetDrives();
+            foreach (DriveInfo drive in drives)
+            {
+                if (drive.DriveType == DriveType.Fixed && drive.IsReady && drive.AvailableFreeSpace > 1000000)
+                {
+                    if (drive.Name[0] > lastLetter)
+                        lastLetter = drive.Name[0];
+                }
+            }
+            return $"{lastLetter}:";
+        }
+
+        /// <summary>
+        /// Display a readable sentence as to when that time happened.
+        /// e.g. "5 minutes ago" or "in 2 days"
+        /// </summary>
+        /// <param name="value"><see cref="DateTime"/>the past/future time to compare from now</param>
+        /// <returns>human friendly format</returns>
+        public static string ToReadableTime(this DateTime value, bool useUTC = false)
         {
             TimeSpan ts;
             if (useUTC)
@@ -1014,6 +1631,55 @@ namespace SimpleNavigation
         }
 
         /// <summary>
+        /// Reads all lines in the <see cref="Stream" />.
+        /// </summary>
+        /// <param name="stream">The <see cref="Stream" /> to read from.</param>
+        /// <returns>All lines in the stream.</returns>
+        public static string[] ReadAllLines(this Stream stream) => ReadAllLines(stream, Encoding.UTF8);
+
+        /// <summary>
+        /// Reads all lines in the <see cref="Stream" />.
+        /// </summary>
+        /// <param name="stream">The <see cref="Stream" /> to read from.</param>
+        /// <param name="encoding">The character encoding to use.</param>
+        /// <returns>All lines in the stream.</returns>
+        public static string[] ReadAllLines(this Stream stream, Encoding encoding)
+        {
+            using (StreamReader reader = new StreamReader(stream, encoding))
+            {
+                return ReadAllLines(reader).ToArray();
+            }
+        }
+
+        /// <summary>
+        /// Reads all lines in the <see cref="TextReader" />.
+        /// </summary>
+        /// <param name="reader">The <see cref="TextReader" /> to read from.</param>
+        /// <returns>All lines in the stream.</returns>
+        public static IEnumerable<string> ReadAllLines(this TextReader reader)
+        {
+            string? line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                yield return line;
+            }
+        }
+
+        /// <summary>
+        /// Reads all lines in the <see cref="TextReader" />.
+        /// </summary>
+        /// <param name="reader">The <see cref="TextReader" /> to read from.</param>
+        /// <returns>All lines in the stream.</returns>
+        public static async IAsyncEnumerable<string> ReadAllLinesAsync(this TextReader reader)
+        {
+            string? line;
+            while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
+            {
+                yield return line;
+            }
+        }
+
+        /// <summary>
         /// De-dupe file writer using a <see cref="HashSet{T}"/>.
         /// </summary>
         public static bool WriteLines(string path, IEnumerable<string> lines)
@@ -1158,6 +1824,51 @@ namespace SimpleNavigation
         }
 
         /// <summary>
+        /// Returns a random selection from <see cref="Microsoft.UI.Colors"/>.
+        /// We are interested in the runtime <see cref="System.Reflection.PropertyInfo"/>
+        /// from the <see cref="Microsoft.UI.Colors"/> sealed class. We will only add a
+        /// property to our collection if it is of type <see cref="Windows.UI.Color"/>.
+        /// </summary>
+        /// <returns><see cref="List{T}"/></returns>
+        public static List<Windows.UI.Color> GetWinUIColorList()
+        {
+            List<Windows.UI.Color> colors = new();
+
+            foreach (var color in typeof(Microsoft.UI.Colors).GetRuntimeProperties())
+            {
+                // We must check the property type before assuming the explicit cast with GetValue.
+                if (color != null && color.PropertyType == typeof(Windows.UI.Color))
+                {
+                    try
+                    {
+                        var clr = (Windows.UI.Color?)color.GetValue(null);
+                        if (clr != null)
+                        {
+                            #pragma warning disable CS8629
+                            if (clr?.A == 0 || (clr?.R == 0 && clr?.G == 0 && clr?.B == 0))
+                                Debug.WriteLine($"Skipping this color (transparent)");
+                            else if (clr?.A != 0 && (clr?.R <= 40 && clr?.G <= 40 && clr?.B <= 40))
+                                Debug.WriteLine($"Skipping this color (too dark)");
+                            else
+                                colors.Add((Windows.UI.Color)clr);
+                            #pragma warning restore CS8629
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Debug.WriteLine($"Failed to get the value for '{color.Name}'");
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"I was looking for type {nameof(Windows.UI.Color)} but found {color?.PropertyType} instead.");
+                }
+            }
+
+            return colors;
+        }
+
+        /// <summary>
         /// Creates a Color object from the hex color code and returns the result.
         /// </summary>
         /// <param name="hexColorCode"></param>
@@ -1198,7 +1909,7 @@ namespace SimpleNavigation
         }
 
         /// <summary>
-        /// Generates a 7 digit color string including the # sign.
+        /// Generates a 7 digit color string (including the pound sign).
         /// If the <see cref="ElementTheme"/> is dark then 0, 1 & 2 options are 
         /// removed so dark colors such as 000000/111111/222222 are not possible.
         /// If the <see cref="ElementTheme"/> is light then D, E & F options are 
@@ -1233,16 +1944,10 @@ namespace SimpleNavigation
         public static Windows.UI.Color Lerp(this Windows.UI.Color colorFrom, Windows.UI.Color colorTo, float amount)
         {
             // Convert colorFrom components to lerp-able floats
-            float sa = colorFrom.A,
-                sr = colorFrom.R,
-                sg = colorFrom.G,
-                sb = colorFrom.B;
+            float sa = colorFrom.A, sr = colorFrom.R, sg = colorFrom.G, sb = colorFrom.B;
 
             // Convert colorTo components to lerp-able floats
-            float ea = colorTo.A,
-                er = colorTo.R,
-                eg = colorTo.G,
-                eb = colorTo.B;
+            float ea = colorTo.A, er = colorTo.R, eg = colorTo.G, eb = colorTo.B;
 
             // lerp the colors to get the difference
             byte a = (byte)Math.Max(0, Math.Min(255, sa.Lerp(ea, amount))),
@@ -1252,6 +1957,18 @@ namespace SimpleNavigation
 
             // return the new color
             return Windows.UI.Color.FromArgb(a, r, g, b);
+        }
+
+        /// <summary>
+        /// Checks each <see cref="Windows.UI.Color"/>'s RGB value to determine if they are similar.
+        /// </summary>
+        /// <remarks>The alpha channel will also be evaluated.</remarks>
+        public static bool IsSimilarTo(this Windows.UI.Color first, Windows.UI.Color second, byte margin)
+        {
+            return Math.Abs(first.A - second.A) <= margin &&
+                   Math.Abs(first.R - second.R) <= margin &&
+                   Math.Abs(first.G - second.G) <= margin &&
+                   Math.Abs(first.B - second.B) <= margin;
         }
 
         /// <summary>
@@ -1423,6 +2140,7 @@ namespace SimpleNavigation
         }
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         static extern int GetCurrentPackageFullName(ref int packageFullNameLength, StringBuilder? packageFullName);
         public static bool IsMSIX
         {
@@ -1438,6 +2156,29 @@ namespace SimpleNavigation
         /// </summary>
         /// <returns>true if Win11 or higher, false otherwise</returns>
         public static bool IsWindows11OrGreater() => Environment.OSVersion.Version >= new Version(10, 0, 22000, 0);
+
+        /// <summary>
+        /// Get OS version by way of <see cref="Windows.System.Profile.AnalyticsInfo"/>.
+        /// </summary>
+        /// <returns><see cref="Version"/></returns>
+        public static Version GetWindowsVersionUsingAnalyticsInfo()
+        {
+            try
+            {
+                ulong version = ulong.Parse(Windows.System.Profile.AnalyticsInfo.VersionInfo.DeviceFamilyVersion);
+                var Major = (ushort)((version & 0xFFFF000000000000L) >> 48);
+                var Minor = (ushort)((version & 0x0000FFFF00000000L) >> 32);
+                var Build = (ushort)((version & 0x00000000FFFF0000L) >> 16);
+                var Revision = (ushort)(version & 0x000000000000FFFFL);
+
+                return new Version(Major, Minor, Build, Revision);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetWindowsVersionUsingAnalyticsInfo: {ex.Message}", $"{nameof(Extensions)}");
+                return new Version(); // 0.0
+            }
+        }
 
         public static string GetRandomSentence(int wordCount)
         {
@@ -1475,6 +2216,175 @@ namespace SimpleNavigation
             // Set the first letter of the first word in the sentenece to uppercase.
             sentence = char.ToUpper(sentence[0]) + sentence.Substring(1);
             return sentence;
+        }
+
+        public static IEnumerable<T> JoinLists<T>(this IEnumerable<T> list1, IEnumerable<T> list2)
+        {
+            var joined = new[] { list1, list2 }.Where(x => x != null).SelectMany(x => x);
+            return joined ?? Enumerable.Empty<T>();
+        }
+        public static IEnumerable<T> JoinLists<T>(this IEnumerable<T> list1, IEnumerable<T> list2, IEnumerable<T> list3)
+        {
+            var joined = new[] { list1, list2, list3 }.Where(x => x != null).SelectMany(x => x);
+            return joined ?? Enumerable.Empty<T>();
+        }
+        public static IEnumerable<T> JoinMany<T>(params IEnumerable<T>[] array)
+        {
+            var final = array.Where(x => x != null).SelectMany(x => x);
+            return final ?? Enumerable.Empty<T>();
+        }
+
+        /// <summary>
+        /// Splits a <see cref="Dictionary{TKey, TValue}"/> into two equal halves.
+        /// </summary>
+        /// <param name="dictionary"><see cref="Dictionary{TKey, TValue}"/></param>
+        /// <returns>tuple</returns>
+        public static (Dictionary<string, string> firstHalf, Dictionary<string, string> secondHalf) SplitDictionary(this Dictionary<string, string> dictionary)
+        {
+            int count = dictionary.Count;
+
+            if (count <= 1)
+            {
+                // Return the entire dictionary as the first half and an empty dictionary as the second half.
+                return (dictionary, new Dictionary<string, string>());
+            }
+
+            int halfCount = count / 2;
+            var firstHalf = dictionary.Take(halfCount).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var secondHalf = dictionary.Skip(halfCount).ToDictionary(kv => kv.Key, kv => kv.Value);
+
+            // Adjust the second half if the count is odd.
+            if (count % 2 != 0)
+                secondHalf = dictionary.Skip(halfCount + 1).ToDictionary(kv => kv.Key, kv => kv.Value);
+
+            return (firstHalf, secondHalf);
+        }
+
+        #pragma warning disable 8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
+        /// <summary>
+        /// Helper for <see cref="System.Collections.Generic.SortedList{TKey, TValue}"/>
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <typeparam name="TValue"></typeparam>
+        /// <param name="sortedList"></param>
+        /// <returns><see cref="Dictionary{TKey, TValue}"/></returns>
+        public static Dictionary<TKey, TValue> ConvertToDictionary<TKey, TValue>(this System.Collections.Generic.SortedList<TKey, TValue> sortedList)
+        {
+            Dictionary<TKey, TValue> dictionary = new Dictionary<TKey, TValue>();
+            foreach (KeyValuePair<TKey, TValue> pair in sortedList)
+            {
+                dictionary.Add(pair.Key, pair.Value);
+            }
+            return dictionary;
+        }
+
+        /// <summary>
+        /// Helper for <see cref="System.Collections.SortedList"/>
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <typeparam name="TValue"></typeparam>
+        /// <param name="sortedList"></param>
+        /// <returns><see cref="Dictionary{TKey, TValue}"/></returns>
+        public static Dictionary<TKey, TValue> ConvertToDictionary<TKey, TValue>(this System.Collections.SortedList sortedList)
+        {
+            Dictionary<TKey, TValue> dictionary = new Dictionary<TKey, TValue>();
+            foreach (DictionaryEntry pair in sortedList)
+            {
+                dictionary.Add((TKey)pair.Key, (TValue)pair.Value);
+            }
+            return dictionary;
+        }
+
+        /// <summary>
+        /// Helper for <see cref="System.Collections.Hashtable"/>
+        /// </summary>
+        /// <typeparam name="TKey"></typeparam>
+        /// <typeparam name="TValue"></typeparam>
+        /// <param name="hashList"></param>
+        /// <returns><see cref="Dictionary{TKey, TValue}"/></returns>
+        public static Dictionary<TKey, TValue> ConvertToDictionary<TKey, TValue>(this System.Collections.Hashtable hashList)
+        {
+            Dictionary<TKey, TValue> dictionary = new Dictionary<TKey, TValue>();
+            foreach (DictionaryEntry pair in hashList)
+            {
+                dictionary.Add((TKey)pair.Key, (TValue)pair.Value);
+            }
+            return dictionary;
+        }
+        #pragma warning restore 8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
+
+        public static void ForEach<T>(this IEnumerable<T> ie, Action<T> action)
+        {
+            foreach (var i in ie)
+            {
+                try { action(i); }
+                catch (Exception ex) { Debug.WriteLine($"{ex.GetType()}: {ex.Message}"); }
+            }
+        }
+
+        public static T Retry<T>(this Func<T> operation, int attempts)
+        {
+            while (true)
+            {
+                try
+                {
+                    attempts--;
+                    return operation();
+                }
+                catch (Exception ex) when (attempts > 0)
+                {
+                    Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.Name}: {ex.Message}", $"{nameof(Extensions)}");
+                    Thread.Sleep(2000);
+                }
+            }
+        }
+
+        public static Task<List<T>> ToListAsync<T>(this IAsyncEnumerable<T> items)
+        {
+            if (items is null)
+                throw new ArgumentNullException(nameof(items));
+
+            return Implementation(items);
+
+            static async Task<List<T>> Implementation(IAsyncEnumerable<T> items)
+            {
+                var rv = new List<T>();
+                await foreach (var item in items)
+                {
+                    rv.Add(item);
+                }
+                return rv;
+            }
+        }
+
+        public static void AddRange<T>(this ICollection<T> collection, IEnumerable<T>? toAdd)
+        {
+            if (collection is null)
+                throw new ArgumentNullException(nameof(collection));
+
+            if (toAdd != null)
+            {
+                foreach (var item in toAdd)
+                    collection.Add(item);
+            }
+        }
+
+        public static void RemoveFirst<T>(this IList<T> collection, Func<T, bool> predicate)
+        {
+            if (collection is null)
+                throw new ArgumentNullException(nameof(collection));
+
+            if (predicate is null)
+                throw new ArgumentNullException(nameof(predicate));
+
+            for (int i = 0; i < collection.Count; i++)
+            {
+                if (predicate(collection[i]))
+                {
+                    collection.RemoveAt(i);
+                    break;
+                }
+            }
         }
     }
 }

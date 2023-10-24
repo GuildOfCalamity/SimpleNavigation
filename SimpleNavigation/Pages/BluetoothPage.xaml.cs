@@ -25,7 +25,7 @@ namespace SimpleNavigation;
 public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
 {
     #region [Properties]
-    readonly object _locker = new();
+    readonly static SlimLock _lock = SlimLock.Create();
 
     /// <summary>
     /// An event that the main page can subscribe to.
@@ -143,10 +143,11 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                                 icoPath = $"/Assets/ico{index}.ico";
                             }
 
-                            // It's rare that we would access this resource at the same time from the other
-                            // thread, but it's good practice to use a Monitor.Enter() or a locking object.
-                            lock (_locker)
+                            try
                             {
+                                // It's rare that we would access this resource at the same time from the other
+                                // thread, but it's good practice to use a Monitor.Enter() or a locking object.
+                                _lock.EnterWrite();
                                 collection.Add(new BTDevice
                                 {
                                     Id = $"{devices[i].Id}",
@@ -155,6 +156,10 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                                     Kind = $"{devices[i].Kind}",
                                     IconPath = $"{icoPath}"
                                 });
+                            }
+                            finally
+                            {
+                                _lock.ExitWrite();
                             }
                         }
                         catch (Exception)
@@ -213,8 +218,11 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                             var strID = $"{devices[i].Id}";
                             if (strID.Contains("bluetooth", StringComparison.OrdinalIgnoreCase))
                             {
-                                lock (_locker)
+                                try
                                 {
+                                    // It's rare that we would access this resource at the same time from the other
+                                    // thread, but it's good practice to use a Monitor.Enter() or a locking object.
+                                    _lock.EnterWrite();
                                     collection.Add(new BTDevice
                                     {
                                         Id = strID,
@@ -223,6 +231,10 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                                         Kind = $"{devices[i].Kind}",
                                         IconPath = $"{icoPath}"
                                     });
+                                }
+                                finally
+                                {
+                                    _lock.ExitWrite();
                                 }
                             }
                             else

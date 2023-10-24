@@ -15,9 +15,11 @@ public static class Win32API
     public const int SC_RESTORE = 0xF120;
 
     [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     public static extern int FindWindow(string lpClassName, string lpWindowName);
 
     [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     public static extern int SendMessage(int hWnd, uint Msg, int wParam, int lParam);
     #endregion
 }

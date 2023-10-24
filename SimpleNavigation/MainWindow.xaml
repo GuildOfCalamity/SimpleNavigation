@@ -24,7 +24,7 @@
                 Height="18"
                 Margin="8,0,0,0"
                 HorizontalAlignment="Left"
-                Source="/Assets/Win10Logo.png" />
+                Source="/Assets/Navigation.png" />
             <TextBlock
                 x:Name="AppTitleBarText"
                 Grid.Column="1"

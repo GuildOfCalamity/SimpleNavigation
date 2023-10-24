@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:SimpleNavigation"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    x:Name="thisPage"
     Background="Transparent"
     NavigationCacheMode="Enabled"
     mc:Ignorable="d">
@@ -15,13 +16,31 @@
     </Page.Resources>
 
     <Grid Margin="10">
-        <ScrollViewer>
+        <ScrollViewer
+            x:Name="rootScrollViewer"
+            MinZoomFactor="1"
+            ZoomMode="Enabled">
             <StackPanel
                 MinWidth="500"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Orientation="Vertical"
                 Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Click="ZoomInButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <SymbolIcon Symbol="ZoomIn" />
+                            <TextBlock Margin="5" Text="{local:ResourceString Name=ZoomInButton}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="ZoomOutButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <SymbolIcon Symbol="ZoomOut" />
+                            <TextBlock Margin="5" Text="{local:ResourceString Name=ZoomOutButton}" />
+                        </StackPanel>
+                    </Button>
+
+                </StackPanel>
                 <TextBlock x:Name="landing" FontSize="20" />
                 <!--  GroupBox-Style Options  -->
                 <Grid
@@ -140,22 +159,80 @@
                     </StackPanel>
                 </Grid>
 
-                <!--
-                    This TreeView demonstrates the SelectedItem binding to a local DependencyProperty.
-                -->
-                <TreeView
-                    x:Name="sampleTreeView"
-                    SelectedItem="{x:Bind SelectedNode, Mode=TwoWay}"
-                    SelectionMode="Single"
-                    ToolTipService.ToolTip="TreeView Settings">
-                    <TreeView.ItemContainerStyle>
-                        <Style TargetType="TreeViewItem">
-                            <Setter Property="CollapsedGlyph" Value="&#xedda;" />
-                            <Setter Property="ExpandedGlyph" Value="&#xeddc;" />
-                            <Setter Property="GlyphBrush" Value="{ThemeResource TextForeground1}" />
-                        </Style>
-                    </TreeView.ItemContainerStyle>
-                </TreeView>
+                <StackPanel
+                    Margin="0,4,0,0"
+                    Orientation="Horizontal"
+                    Spacing="10">
+                    <!--
+                        Color Picker Example
+                    -->
+                    <AppBarButton
+                        x:Name="ChangeColorButton"
+                        CornerRadius="4"
+                        Label="Color Picker"
+                        ToolTipService.ToolTip="Change Colors">
+                        <AppBarButton.Icon>
+                            <FontIcon Glyph="&#xe790;" />
+                        </AppBarButton.Icon>
+                        <AppBarButton.Flyout>
+                            <Flyout>
+                                <StackPanel
+                                    Width="Auto"
+                                    Height="Auto"
+                                    HorizontalAlignment="Stretch"
+                                    AllowFocusOnInteraction="True">
+                                    <ColorPicker
+                                        x:Name="colorPicker"
+                                        Height="Auto"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        ColorSpectrumShape="Ring"
+                                        IsAlphaEnabled="True"
+                                        IsColorChannelTextInputVisible="True"
+                                        IsColorPreviewVisible="True"
+                                        IsColorSliderVisible="True"
+                                        IsHexInputVisible="True"
+                                        IsMoreButtonVisible="True" />
+                                    <Button
+                                        x:Name="ApplyColorButton"
+                                        Margin="0,5,0,0"
+                                        HorizontalAlignment="Stretch"
+                                        Click="ApplyColor_Click">
+                                        <StackPanel
+                                            Height="Auto"
+                                            HorizontalAlignment="Stretch"
+                                            Orientation="Horizontal">
+                                            <TextBlock
+                                                x:Name="tbApply"
+                                                Margin="5,0,0,0"
+                                                VerticalAlignment="Center"
+                                                HorizontalTextAlignment="Center"
+                                                IsColorFontEnabled="True"
+                                                Text="Apply to this page" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Flyout>
+                        </AppBarButton.Flyout>
+                    </AppBarButton>
+
+                    <!--
+                        This TreeView demonstrates the SelectedItem binding to a local DependencyProperty.
+                    -->
+                    <TreeView
+                        x:Name="sampleTreeView"
+                        SelectedItem="{x:Bind SelectedNode, Mode=TwoWay}"
+                        SelectionMode="Single"
+                        ToolTipService.ToolTip="TreeView Settings">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="CollapsedGlyph" Value="&#xedda;" />
+                                <Setter Property="ExpandedGlyph" Value="&#xeddc;" />
+                                <Setter Property="GlyphBrush" Value="{ThemeResource TextForeground1}" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                    </TreeView>
+                </StackPanel>
 
                 <StackPanel
                     Margin="0,8,0,0"

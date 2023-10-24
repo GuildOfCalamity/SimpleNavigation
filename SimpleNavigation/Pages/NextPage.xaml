@@ -12,6 +12,24 @@
     mc:Ignorable="d">
 
     <Grid Margin="10">
+        <!--  Backdrop  -->
+        <Rectangle
+            x:Name="BackgroundRectangle"
+            Margin="-10"
+            Stretch="UniformToFill">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <LinearGradientBrush.GradientStops>
+                        <GradientStop Offset="0" Color="#6F101014" />
+                        <GradientStop Offset="0.2" Color="#6F202024" />
+                        <GradientStop Offset="0.6" Color="#6F033B9E" />
+                        <GradientStop Offset="0.8" Color="#7F00214C" />
+                        <GradientStop Offset="1" Color="#7F010E26" />
+                    </LinearGradientBrush.GradientStops>
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
         <TeachingTip
             x:Name="ttAutoSuggest"
             Title="Auto-Suggestions"

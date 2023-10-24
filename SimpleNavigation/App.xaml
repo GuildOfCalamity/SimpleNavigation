@@ -71,7 +71,7 @@
 
                     <ResourceDictionary.ThemeDictionaries>
                         <ResourceDictionary x:Key="Dark">
-                            <Brush x:Key="GlowBrush">#CF0E54C0</Brush>
+                            <Brush x:Key="GlowBrush">#CF80808F</Brush>
                             <Brush x:Key="BackgroundBrush">#AA202020</Brush>
                             <SolidColorBrush
                                 x:Key="TextForeground1"
@@ -101,7 +101,7 @@
                                 TintOpacity="0.8" />
                         </ResourceDictionary>
                         <ResourceDictionary x:Key="Light">
-                            <Brush x:Key="GlowBrush">#CF0E54C0</Brush>
+                            <Brush x:Key="GlowBrush">#CF20202F</Brush>
                             <Brush x:Key="BackgroundBrush">#AAF0F0F0</Brush>
                             <SolidColorBrush
                                 x:Key="TextForeground1"

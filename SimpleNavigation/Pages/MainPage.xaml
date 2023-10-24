@@ -198,7 +198,7 @@
                             HorizontalAlignment="Right"
                             VerticalAlignment="Top"
                             Opacity="1"
-                            Source="/Assets/Win10Logo.png" />
+                            Source="/Assets/Navigation.png" />
                         <TextBlock
                             VerticalAlignment="Center"
                             Style="{StaticResource SubtitleTextBlockStyle}"

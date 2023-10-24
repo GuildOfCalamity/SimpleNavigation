@@ -18,6 +18,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Microsoft.UI;
 using System.Text;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace SimpleNavigation;
 
@@ -91,14 +92,14 @@ public sealed partial class SettingsPage : Page
         this.Loaded += SettingsPage_Loaded;
         
         // Action example for our ProgressButton.
-        PB_ClickEvent += async () =>
-        {
+        PB_ClickEvent += async () => {
             IsBusy = true;
             await Task.Delay(3000);
             IsBusy = false;
         };
     }
 
+    #region [Page Events]
     void SettingsPage_Loaded(object sender, RoutedEventArgs e)
     {
         tbReferences.Text = string.Empty;
@@ -160,6 +161,7 @@ public sealed partial class SettingsPage : Page
         }
         base.OnNavigatedTo(e);
     }
+    #endregion
 
     #region [Control Events]
     void myColorButton_Click(SplitButton sender, SplitButtonClickEventArgs args)
@@ -298,6 +300,7 @@ public sealed partial class SettingsPage : Page
     }
     #endregion
 
+    #region [Button Events]
     async void SaveConfig_Click(object sender, RoutedEventArgs e)
     {
         var result = await ConfigHelper.SaveConfig(new Config
@@ -347,4 +350,56 @@ public sealed partial class SettingsPage : Page
             });
         }
     }
+
+    void ApplyColor_Click(object sender, RoutedEventArgs e)
+    {
+        Windows.UI.Color? newColor = colorPicker.Color;
+        Windows.UI.Color? prevColor = colorPicker.PreviousColor;
+
+        if (newColor == null)
+            return;
+
+        var scb = new SolidColorBrush((Windows.UI.Color)newColor);
+
+        PostMessageEvent?.Invoke(this, new Message
+        {
+            Content = $"You picked the color '{newColor}'",
+            Severity = InfoBarSeverity.Informational,
+        });
+
+        if (thisPage.Background is SolidColorBrush scbPage)
+        {
+            if (scbPage.Color.IsSimilarTo((Windows.UI.Color)newColor, 12))
+            {
+                tbApply.Text = $"⚠️ Colors are too similar";
+            }
+            else
+            {
+                tbApply.Text = $"Apply to this page";
+                thisPage.Background = scb;
+            }
+        }
+
+        // Change AppBarButton icon programmatically.
+        //ChangeColorButton.Icon = new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = "\ue71e" };
+        //ChangeColorButton.Label = "New Label Text";
+    }
+
+    void ZoomInButton_Click(object sender, RoutedEventArgs e) => ZoomPage(1.8f);
+    
+    void ZoomOutButton_Click(object sender, RoutedEventArgs e) => ZoomPage(1f);
+
+    /// <summary>
+    /// Default is 200%
+    /// </summary>
+    void ZoomPage(float factor = 2f)
+    {
+        PostMessageEvent?.Invoke(this, new Message
+        {
+            Content = $"{AppResourceManager.GetInstance.GetString("Zoom.Message.Action")} {factor * 100}%",
+            Severity = InfoBarSeverity.Informational,
+        });
+        rootScrollViewer.ChangeView(null, null, factor);
+    }
+    #endregion
 }

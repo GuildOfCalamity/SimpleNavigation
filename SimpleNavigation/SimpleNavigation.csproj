@@ -15,7 +15,7 @@
     <!-- 
       Only icon formatted images are allowed for this property. 
     -->
-    <ApplicationIcon>Assets/Win10Logo.ico</ApplicationIcon>
+    <ApplicationIcon>Assets/Navigation.ico</ApplicationIcon>
 
     <!-- ** Extras (https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props) ** -->
     <!--
@@ -73,6 +73,9 @@
     <None Remove="Assets\FileIcon.png" />
     <None Remove="Assets\gear1.png" />
     <None Remove="Assets\gear2.png" />
+    <None Remove="Assets\Navigation.ico" />
+    <None Remove="Assets\Navigation.png" />
+    <None Remove="Assets\Rotator64.gif" />
     <None Remove="Assets\Win10Logo.ico" />
     <None Remove="Assets\Win10Logo.png" />
     <None Remove="Assets\WinUI_Outline.png" />

@@ -27,7 +27,7 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
     #region [Props]
 	double xSpeed = 4;
 	double ySpeed = 4;
-	const int maxObjects = 30;
+	const int maxObjects = 28;
 	const double gravityFactor = 0.5;
     const double maxGravitySpeed = 26;
 	DispatcherTimer? timer = null;
@@ -140,7 +140,13 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
             assets.Add(new Uri($"ms-appx:///Assets/{Path.GetFileName(f)}"));
         }
 
-		cmbAssets.ItemsSource = assets;
+        // Animated GIF example.
+        foreach (var f in Directory.GetFiles(path, "*.gif", SearchOption.TopDirectoryOnly))
+        {
+            assets.Add(new Uri($"ms-appx:///Assets/{Path.GetFileName(f)}"));
+        }
+
+        cmbAssets.ItemsSource = assets;
     }
 
     /// <summary>
@@ -451,7 +457,7 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 						double distance = Math.Sqrt(Math.Pow(x - otherX, 2) + Math.Pow(y - otherY, 2));
 
 						// Assuming images are square, change to appropriate width for non-square images.
-						if (distance < image.Width + 0.1)
+						if (distance < image.Width + 0.01)
 						{
 							// Record the collision.
 							otherImage.Bangs += 1;
@@ -469,13 +475,35 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 							x = otherX + Math.Cos(angle) * properties.Width;
 							y = otherY + Math.Sin(angle) * properties.Width;
 
-							// Re-check
-							//distance = Math.Sqrt(Math.Pow(x - otherX, 2) + Math.Pow(y - otherY, 2));
-							//if (distance is still less than image width then do something)
-							//{
-							//
-							//}
-						}
+							// Re-check for "tidally locked".
+							distance = Math.Sqrt(Math.Pow(x - otherX, 2) + Math.Pow(y - otherY, 2));
+                            if (distance < image.Width)
+                            {
+								//var previous = x;
+                                x = otherX + Math.Cos(angle) * (properties.Width + 2);
+								//Debug.WriteLine($"Moving {properties.Name} {previous:N2} to {x:N2}");
+							
+								//previous = y;
+                                y = otherY + Math.Sin(angle) * (properties.Width + 2);
+                                //Debug.WriteLine($"Moving {properties.Name} {previous:N2} to {y:N2}");
+                            }
+
+							// We can check for images that are too similar in speed properties and take the appropriate measures.
+                            //while (properties.XSpeed.IsSimilarTo(otherImage.XSpeed, 0.1) && properties.YSpeed.IsSimilarTo(otherImage.YSpeed, 0.1))
+                            //{
+                            //	Debug.WriteLine($">> '{properties.Name}' and '{otherImage.Name}' are similar");
+                            //	if (Extensions.CoinFlip())
+                            //	{
+                            //		otherImage.XSpeed += Random.Shared.Next(0, 5) + 0.111;
+                            //		otherImage.YSpeed += Random.Shared.Next(0, 5) + 0.111;
+                            //	}
+                            //	else
+                            //	{
+                            //        otherImage.XSpeed -= Random.Shared.Next(0, 5) + 0.111;
+                            //        otherImage.YSpeed -= Random.Shared.Next(0, 5) + 0.111;
+                            //    }
+                            //}
+                        }
 					}
 				}
 				#endregion
@@ -538,8 +566,8 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 			{
 				if (properties.YSpeed >= 0 && properties.YSpeed < 1.01 && (y >= canvas.ActualHeight - (properties.Height + 1)))
 				{
-					// 5% chance to jump.
-					if (Random.Shared.Next(0, 100) >= 95)
+					// Apply a 3% chance to jump, 60 times per frame.
+					if (Random.Shared.Next(0, 100) > 96)
 					{
 						var factor = ((canvas.ActualHeight / properties.Height) * 2.9) + 0.5;
 						properties.YSpeed = Math.Min(factor, maxGravitySpeed) * -1;

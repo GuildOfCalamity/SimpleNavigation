@@ -256,7 +256,15 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         this.Loaded += (_, _) => 
         { 
             ttSettings.IsOpen = true;
-            //using (var file = File.AppendText(Path.Combine(Directory.GetCurrentDirectory(), "Cleaned.txt"))) { foreach (var name in UriCommands) { file.WriteLine($"\"{name.Trim()}\","); } }
+
+            //using (var file = File.AppendText(Path.Combine(Directory.GetCurrentDirectory(), "Cleaned.txt")))
+            //{
+            //    foreach (var name in UriCommands)
+            //    {
+            //        file.WriteLine($"\"{name.Trim()}\",");
+            //    }
+            //    file.Flush();
+            //}
         };
     }
 
@@ -369,7 +377,7 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Helper for returning a <see cref="StorageFile"/> image asset.
+    /// Helper for returning a <see cref="StorageFile"/>.
     /// </summary>
     async Task<StorageFile> GetFileToLaunch()
     {
@@ -479,7 +487,7 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         }
 
         //check for snipping tool
-        var uri2 = new Uri("ms-screensketch:");
+        var uri2 = new Uri("ms-ScreenSketch:");
         var available2 = Windows.System.Launcher.QueryUriSupportAsync(uri2, LaunchQuerySupportType.UriForResults, "Microsoft.ScreenSketch_8wekyb3d8bbwe").AsTask().Result;
         if (available2 == LaunchQuerySupportStatus.Available)
         {
@@ -526,25 +534,25 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
                     switch (resultCode)
                     {
                         case 1:
-                            Debug.WriteLine($"🡒 Cancelled by the user.");
+                            // Cancelled by the user
                             break;
                         case 2:
-                            Debug.WriteLine($"🡒 The specified file was invalid.");
+                            // The specified file was invalid
                             break;
                         case 3:
-                            Debug.WriteLine($"🡒 The specified file's content type is invalid.");
+                            // The specified file's content type is invalid
                             break;
                         case 4:
-                            Debug.WriteLine($"🡒 The specified file was too big.");
+                            // The specified file was too big
                             break;
                         case 5:
-                            Debug.WriteLine($"🡒 The specified file was too long.");
+                            // The specified file was too long
                             break;
                         case 6:
-                            Debug.WriteLine($"🡒 The file was protected by DRM.");
+                            // The file was protected by DRM
                             break;
                         case 7:
-                            Debug.WriteLine($"🡒 The specified parameter was incorrect.");
+                            // The specified parameter was incorrect
                             break;
                     }
                 }
@@ -552,14 +560,11 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         }
     }
 
-    /// <summary>
-    /// The OSK can be fussy, so we'll use a Win32 API to make sure it's closed.
-    /// </summary>
     void CloseKeyboard()
     {
-        int iHandle = Win32API.FindWindow("IPTIP_Main_Window", "");
+        int iHandle = FindWindow("IPTIP_Main_Window", "");
         if (iHandle > 0)
-            Win32API.SendMessage(iHandle, Win32API.WM_SYSCOMMAND, Win32API.SC_CLOSE, 0);
+            SendMessage(iHandle, WM_SYSCOMMAND, SC_CLOSE, 0);
     }
 
     #region [AutoSuggest]
@@ -620,5 +625,17 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
     }
     #endregion
 
- 
+    #region [DLL Imports]
+    private const int WM_SYSCOMMAND = 0x0112;
+    private const int SC_CLOSE = 0xF060;
+    private const int SC_MINIMIZE = 0xF020;
+
+    [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    public static extern int FindWindow(string lpClassName, string lpWindowName);
+
+    [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    public static extern int SendMessage(int hWnd, uint Msg, int wParam, int lParam);
+    #endregion
 }

@@ -47,6 +47,19 @@
                 <Run Text="However, the point of this app is to show alternative techniques." />
                 <LineBreak />
                 <LineBreak />
+                <Run Text="This app does not employ " />
+                <Run
+                    FontWeight="Medium"
+                    Foreground="Goldenrod"
+                    Text="MVVM" />
+                <Run Text=" or " />
+                <Run
+                    FontWeight="Medium"
+                    Foreground="Goldenrod"
+                    Text="IoC" />
+                <Run Text=". If you're interested in those, please see my other repo examples." />
+                <LineBreak />
+                <LineBreak />
                 <Run Foreground="{ThemeResource TextForeground1}" Text="Copyright © GuildOfCalamity — October 2023" />
             </TextBlock>
             <TextBlock
@@ -60,8 +73,8 @@
             </TextBlock>
 
             <Button
-                Content="{x:Bind local:App.Attribs.AssemblyFramework, Mode=OneWay}"
                 Click="Button_Click"
+                Content="{x:Bind local:App.Attribs.AssemblyFramework, Mode=OneWay}"
                 CornerRadius="5"
                 FontSize="{StaticResource MediumFontSize}"
                 FontWeight="SemiBold"
@@ -84,17 +97,17 @@
                 </interact:Interaction.Behaviors>
             </Button>
 
-            <Grid Padding="16">
+            <Grid Padding="20">
                 <ctrl:SimpleGlowPanel
                     Padding="1"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
                     Background="{ThemeResource GlowBrush}"
-                    BlurRadius="48">
+                    BlurRadius="55">
                     <Image
                         Width="50"
                         Height="50"
-                        Source="/Assets/WinUI_Outline.png"
+                        Source="/Assets/Navigation.png"
                         Stretch="Uniform" />
                 </ctrl:SimpleGlowPanel>
             </Grid>
