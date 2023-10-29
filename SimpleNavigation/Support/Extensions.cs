@@ -25,11 +25,98 @@ using System.Collections;
 using System.Threading;
 using Microsoft.UI.Windowing;
 using Microsoft.UI;
+using System.Collections.Specialized;
 
 namespace SimpleNavigation
 {
     public static class Extensions
     {
+        /// <summary>
+        /// InfoBadgeControl.Icon = (IconElement)new FontIcon() { Glyph = IntToUTF16(0xE701) };
+        /// </summary>
+        public static IconElement GetIcon(string imagePath)
+        {
+            return imagePath.ToLowerInvariant().EndsWith(".png") ?
+                        (IconElement)new BitmapIcon() { UriSource = new Uri(imagePath, UriKind.RelativeOrAbsolute), ShowAsMonochrome = false } :
+                        (IconElement)new FontIcon() { Glyph = imagePath };
+        }
+
+		/// <summary>
+		/// string fin = IntToUTF16((int)FluentIcon.MapPin);
+		/// https://stackoverflow.com/questions/71546789/the-u-escape-sequence-in-c-sharp
+		/// </summary>
+		public static string IntToUTF16(int value)
+        {
+            var builder = new StringBuilder();
+            builder.Append((char)value);
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// string[] names = System.Enum.GetNames(typeof(FluentIcon));
+        /// int[] values = EnumToIntArray{FluentIcon}(names);
+        /// </summary>
+        public static int[] EnumToIntArray<TEnum>(this string[] enumStrings) where TEnum : struct
+        {
+            List<int> values = new();
+            foreach (string s in enumStrings)
+            {
+                if (Enum.TryParse(s, ignoreCase: true, out TEnum result))
+                {
+                    // Using the Convert class:
+					int intVal = Convert.ToInt32(result);
+                    
+                    // Using an explicit cast:
+					//int intVal = (int)(object)result;
+
+					values.Add(intVal);
+                }
+            }
+            return values.ToArray();
+        }
+
+        /// <summary>
+        /// This is a slightly more generic version which omits the TEnum:struct signature.
+        /// Loops through all enums of type T using <see cref="Enum.GetNames(Type)"/>.
+        /// </summary>
+        /// <returns>true if enum was parsed successfully, false otherwise</returns>
+        /// <example>
+        /// if ("CurrentCultureIgnoreCase".EnumTryParse(out StringComparison ccic)) { Debug.WriteLine("Converted Successfully"); }
+        /// </example>
+        public static bool EnumTryParse<T>(this string input, out T? outEnum)
+        {
+            foreach (string en in Enum.GetNames(typeof(T)))
+            {
+                if (en.Equals(input, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    outEnum = (T?)Enum.Parse(typeof(T), input, true);
+                    return true;
+                }
+            }
+            outEnum = default;
+            return false;
+        }
+
+        /// <summary>
+        /// This is a slightly more generic version which omits the TEnum:struct signature.
+        /// Returns the enum directly without using a TryParse style.
+        /// </summary>
+        /// <example>
+        /// var ccic = "CurrentCultureIgnoreCase".ToEnum{StringComparison}();
+        /// </example>
+        public static TEnum? ToEnum<TEnum>(this string value)
+        {
+            if (string.IsNullOrEmpty(value)) 
+                return default;
+            
+            var parsed = Enum.Parse(typeof(TEnum), value, true);
+
+            if (parsed == null)
+                return default;
+
+            return (TEnum)parsed;
+        }
+
         /// <summary>
         /// A random <see cref="Boolean"/> generator.
         /// </summary>
@@ -132,7 +219,7 @@ namespace SimpleNavigation
         /// var vm = frame.GetPageViewModel();
         /// </summary>
         public static object? GetPageViewModel(this Frame frame)
-        { 
+        {
             return frame?.Content?.GetType().GetProperty("ViewModel")?.GetValue(frame.Content, null);
         }
 
@@ -159,9 +246,9 @@ namespace SimpleNavigation
                 }
                 catch (Exception ex) { Debug.WriteLine($"OpenFile: {ex.Message}"); }
             }
-            else 
-            { 
-                Debug.WriteLine($"OpenFile: '{System.IO.Path.GetFileName(filePath)}' does not exist."); 
+            else
+            {
+                Debug.WriteLine($"OpenFile: '{System.IO.Path.GetFileName(filePath)}' does not exist.");
             }
         }
 
@@ -206,98 +293,98 @@ namespace SimpleNavigation
             return null;
         }
 
-		public static IEnumerable<Type> GetHierarchyFromUIElement(this Type element)
-		{
-			if (element.GetTypeInfo().IsSubclassOf(typeof(UIElement)) != true)
-			{
-				yield break;
-			}
+        public static IEnumerable<Type> GetHierarchyFromUIElement(this Type element)
+        {
+            if (element.GetTypeInfo().IsSubclassOf(typeof(UIElement)) != true)
+            {
+                yield break;
+            }
 
-			Type current = element;
+            Type current = element;
 
-			while (current != null && current != typeof(UIElement))
-			{
-				yield return current;
-				current = current.GetTypeInfo().BaseType;
-			}
-		}
+            while (current != null && current != typeof(UIElement))
+            {
+                yield return current;
+                current = current.GetTypeInfo().BaseType;
+            }
+        }
 
-		public static void DisplayRoutedEventsForUIElement()
-		{
-			Type uiElementType = typeof(UIElement);
-			var routedEvents = uiElementType.GetEvents();
-			Debug.WriteLine($"[All RoutedEvents for UIElement]");
-			foreach (var routedEvent in routedEvents)
-			{
-				if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
-					routedEvent.EventHandlerType == typeof(RoutedEvent) ||
-					routedEvent.EventHandlerType == typeof(EventHandler))
-				{
-					Debug.WriteLine($" - '{routedEvent.Name}'");
-				}
+        public static void DisplayRoutedEventsForUIElement()
+        {
+            Type uiElementType = typeof(UIElement);
+            var routedEvents = uiElementType.GetEvents();
+            Debug.WriteLine($"[All RoutedEvents for UIElement]");
+            foreach (var routedEvent in routedEvents)
+            {
+                if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
+                    routedEvent.EventHandlerType == typeof(RoutedEvent) ||
+                    routedEvent.EventHandlerType == typeof(EventHandler))
+                {
+                    Debug.WriteLine($" - '{routedEvent.Name}'");
+                }
                 else if (routedEvent.MemberType == MemberTypes.Event)
                 {
-					Debug.WriteLine($" - '{routedEvent.Name}'");
-				}
-			}
-		}
+                    Debug.WriteLine($" - '{routedEvent.Name}'");
+                }
+            }
+        }
 
-		public static void DisplayRoutedEventsForFrameworkElement()
-		{
-			Type fwElementType = typeof(FrameworkElement);
-			var routedEvents = fwElementType.GetEvents();
-			Debug.WriteLine($"[All RoutedEvents for FrameworkElement]");
-			foreach (var routedEvent in routedEvents)
-			{
-				if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
-					routedEvent.EventHandlerType == typeof(RoutedEvent) ||
-					routedEvent.EventHandlerType == typeof(EventHandler))
-				{
-					Debug.WriteLine($" - '{routedEvent.Name}'");
-				}
-				else if (routedEvent.MemberType == MemberTypes.Event)
-				{
-					Debug.WriteLine($" - '{routedEvent.Name}'");
-				}
-			}
-		}
+        public static void DisplayRoutedEventsForFrameworkElement()
+        {
+            Type fwElementType = typeof(FrameworkElement);
+            var routedEvents = fwElementType.GetEvents();
+            Debug.WriteLine($"[All RoutedEvents for FrameworkElement]");
+            foreach (var routedEvent in routedEvents)
+            {
+                if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
+                    routedEvent.EventHandlerType == typeof(RoutedEvent) ||
+                    routedEvent.EventHandlerType == typeof(EventHandler))
+                {
+                    Debug.WriteLine($" - '{routedEvent.Name}'");
+                }
+                else if (routedEvent.MemberType == MemberTypes.Event)
+                {
+                    Debug.WriteLine($" - '{routedEvent.Name}'");
+                }
+            }
+        }
 
-		public static void DisplayRoutedEventsForControl()
-		{
-			Type ctlElementType = typeof(Microsoft.UI.Xaml.Controls.Control);
-			var routedEvents = ctlElementType.GetEvents();
-			Debug.WriteLine($"[All RoutedEvents for Control]");
-			foreach (var routedEvent in routedEvents)
-			{
-				if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
-					routedEvent.EventHandlerType == typeof(RoutedEvent) ||
-					routedEvent.EventHandlerType == typeof(EventHandler))
-				{
-					Debug.WriteLine($" - '{routedEvent.Name}'");
-				}
-				else if (routedEvent.MemberType == MemberTypes.Event)
-				{
-					Debug.WriteLine($" - '{routedEvent.Name}'");
-				}
-			}
-		}
+        public static void DisplayRoutedEventsForControl()
+        {
+            Type ctlElementType = typeof(Microsoft.UI.Xaml.Controls.Control);
+            var routedEvents = ctlElementType.GetEvents();
+            Debug.WriteLine($"[All RoutedEvents for Control]");
+            foreach (var routedEvent in routedEvents)
+            {
+                if (routedEvent.EventHandlerType == typeof(RoutedEventHandler) ||
+                    routedEvent.EventHandlerType == typeof(RoutedEvent) ||
+                    routedEvent.EventHandlerType == typeof(EventHandler))
+                {
+                    Debug.WriteLine($" - '{routedEvent.Name}'");
+                }
+                else if (routedEvent.MemberType == MemberTypes.Event)
+                {
+                    Debug.WriteLine($" - '{routedEvent.Name}'");
+                }
+            }
+        }
 
-		/// <summary>
-		/// I created this to show what controls are members of <see cref="Microsoft.UI.Xaml.FrameworkElement"/>.
-		/// </summary>
-		public static void FindControlsInheritingFromFrameworkElement()
-		{
-			var controlAssembly = typeof(Microsoft.UI.Xaml.Controls.Control).GetTypeInfo().Assembly;
-			var controlTypes = controlAssembly.GetTypes()
-				.Where(type => type.Namespace == "Microsoft.UI.Xaml.Controls" &&
-				typeof(Microsoft.UI.Xaml.FrameworkElement).IsAssignableFrom(type));
+        /// <summary>
+        /// I created this to show what controls are members of <see cref="Microsoft.UI.Xaml.FrameworkElement"/>.
+        /// </summary>
+        public static void FindControlsInheritingFromFrameworkElement()
+        {
+            var controlAssembly = typeof(Microsoft.UI.Xaml.Controls.Control).GetTypeInfo().Assembly;
+            var controlTypes = controlAssembly.GetTypes()
+                .Where(type => type.Namespace == "Microsoft.UI.Xaml.Controls" &&
+                typeof(Microsoft.UI.Xaml.FrameworkElement).IsAssignableFrom(type));
 
-			foreach (var controlType in controlTypes)
-			{
-				Debug.WriteLine($"[FrameworkElement] {controlType.FullName}");
-			}
-		}
-		#endregion
+            foreach (var controlType in controlTypes)
+            {
+                Debug.WriteLine($"[FrameworkElement] {controlType.FullName}");
+            }
+        }
+        #endregion
 
         #region [Window Helpers]
         /// <summary>
@@ -555,7 +642,7 @@ namespace SimpleNavigation
         /// <param name="window">The window to return the handle for</param>
         /// <returns>HWND handle</returns>
         public static IntPtr GetWindowHandle(this Microsoft.UI.Xaml.Window window)
-        { 
+        {
             return window is null ? throw new ArgumentNullException(nameof(window)) : WinRT.Interop.WindowNative.GetWindowHandle(window);
         }
 
@@ -589,8 +676,8 @@ namespace SimpleNavigation
         private static extern IntPtr GetWindowHandleFromWindowId(WindowId windowId, out IntPtr result);
         #endregion
 
-		#region [Window Tracking]
-		static private List<Window> _activeWindows = new List<Window>();
+        #region [Window Tracking]
+        static private List<Window> _activeWindows = new List<Window>();
         /// <summary>
         /// From inside a Page or Control: var window = Extensions.GetWindowForElement(this);
         /// </summary>
@@ -639,21 +726,21 @@ namespace SimpleNavigation
             }
         }
 
-		public static bool CheckForCorruptData(List<byte> data)
-		{
+        public static bool CheckForCorruptData(List<byte> data)
+        {
             if (data.Count == 0)
                 return false;
 
-			bool stxPresent = data.First() == 0x02;
-			bool etxPresent = data.Last() == 0x03;
-			bool anyOtherDataPresent = data.Distinct().Where(p => p != 0x00 && p != 0xFF).Count() > 0;
-			if (!stxPresent && !etxPresent && !anyOtherDataPresent)
-			{
-				Debug.WriteLine("Corrupt data detected.");
+            bool stxPresent = data.First() == 0x02;
+            bool etxPresent = data.Last() == 0x03;
+            bool anyOtherDataPresent = data.Distinct().Where(p => p != 0x00 && p != 0xFF).Count() > 0;
+            if (!stxPresent && !etxPresent && !anyOtherDataPresent)
+            {
+                Debug.WriteLine("Corrupt data detected.");
                 return true;
-			}
+            }
             return false;
-		}
+        }
         #endregion
 
         public static async Task<ulong> GetFolderSize(this Windows.Storage.StorageFolder folder)
@@ -721,9 +808,9 @@ namespace SimpleNavigation
                 foreach (ProcessModule module in process.Modules)
                 {
                     var fn = module.FileName ?? "Empty";
-                    if (excludeWinSys && 
-                        !fn.StartsWith(winSys, StringComparison.OrdinalIgnoreCase) && 
-                        !fn.StartsWith(winProg, StringComparison.OrdinalIgnoreCase) && 
+                    if (excludeWinSys &&
+                        !fn.StartsWith(winSys, StringComparison.OrdinalIgnoreCase) &&
+                        !fn.StartsWith(winProg, StringComparison.OrdinalIgnoreCase) &&
                         !fn.EndsWith($"{self}.exe", StringComparison.OrdinalIgnoreCase))
                         modules.AppendLine($"{Path.GetFileName(fn)} ({GetFileVersion(fn)})");
                     else if (!excludeWinSys)
@@ -1406,17 +1493,17 @@ namespace SimpleNavigation
             return (size / Math.Pow(1024, 6)).ToString("F0") + "EB";
         }
 
-		public static bool IsPathTooLong(string path)
-		{
-			try
-			{
-				var tmp = Path.GetFullPath(path);
-				return false;
-			}
-			catch (UnauthorizedAccessException) { return false; }
-			catch (DirectoryNotFoundException) { return false; }
-			catch (PathTooLongException) { return true; }
-		}
+        public static bool IsPathTooLong(string path)
+        {
+            try
+            {
+                var tmp = Path.GetFullPath(path);
+                return false;
+            }
+            catch (UnauthorizedAccessException) { return false; }
+            catch (DirectoryNotFoundException) { return false; }
+            catch (PathTooLongException) { return true; }
+        }
 
         static bool IsValidPath(string path)
         {
@@ -1523,15 +1610,15 @@ namespace SimpleNavigation
         /// </summary>
         /// <param name="span"><see cref="TimeSpan"/></param>
         /// <param name="significantDigits">number of right side digits in output (precision)</param>
-        /// <returns>human-friendly string</returns>
-        public static string ToTimeString(this TimeSpan span, int significantDigits = 3)
+        /// <returns></returns>
+        public static string ToTimeString(this TimeSpan? span, int significantDigits = 3)
         {
             var format = $"G{significantDigits}";
-            return span.TotalMilliseconds < 1000 ? span.TotalMilliseconds.ToString(format) + " milliseconds"
-                    : (span.TotalSeconds < 60 ? span.TotalSeconds.ToString(format) + " seconds"
-                    : (span.TotalMinutes < 60 ? span.TotalMinutes.ToString(format) + " minutes"
-                    : (span.TotalHours < 24 ? span.TotalHours.ToString(format) + " hours"
-                    : span.TotalDays.ToString(format) + " days")));
+            return span?.TotalMilliseconds < 1000 ? span?.TotalMilliseconds.ToString(format) + " milliseconds"
+                    : (span?.TotalSeconds < 60 ? span?.TotalSeconds.ToString(format) + " seconds"
+                    : (span?.TotalMinutes < 60 ? span?.TotalMinutes.ToString(format) + " minutes"
+                    : (span?.TotalHours < 24 ? span?.TotalHours.ToString(format) + " hours"
+                    : span?.TotalDays.ToString(format) + " days")));
         }
 
         /// <summary>
@@ -1844,14 +1931,14 @@ namespace SimpleNavigation
                         var clr = (Windows.UI.Color?)color.GetValue(null);
                         if (clr != null)
                         {
-                            #pragma warning disable CS8629
+#pragma warning disable CS8629
                             if (clr?.A == 0 || (clr?.R == 0 && clr?.G == 0 && clr?.B == 0))
                                 Debug.WriteLine($"Skipping this color (transparent)");
                             else if (clr?.A != 0 && (clr?.R <= 40 && clr?.G <= 40 && clr?.B <= 40))
                                 Debug.WriteLine($"Skipping this color (too dark)");
                             else
                                 colors.Add((Windows.UI.Color)clr);
-                            #pragma warning restore CS8629
+#pragma warning restore CS8629
                         }
                     }
                     catch (Exception)
@@ -2260,7 +2347,7 @@ namespace SimpleNavigation
             return (firstHalf, secondHalf);
         }
 
-        #pragma warning disable 8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
+#pragma warning disable 8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
         /// <summary>
         /// Helper for <see cref="System.Collections.Generic.SortedList{TKey, TValue}"/>
         /// </summary>
@@ -2311,7 +2398,7 @@ namespace SimpleNavigation
             }
             return dictionary;
         }
-        #pragma warning restore 8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
+#pragma warning restore 8714 // The type cannot be used as type parameter in the generic type or method. Nullability of type argument doesn't match 'notnull' constraint.
 
         public static void ForEach<T>(this IEnumerable<T> ie, Action<T> action)
         {
@@ -2385,6 +2472,117 @@ namespace SimpleNavigation
                     break;
                 }
             }
+        }
+
+        public static NameValueCollection? ExtractJsonObjectFromQueryString(string uriQuery, string root = "auth", string key = "tokenId")
+        {
+            NameValueCollection? vals = null;
+
+            try
+            {
+                vals = System.Web.HttpUtility.ParseQueryString(uriQuery);
+            }
+            catch (Exception ex) { Debug.WriteLine($"ExtractJsonObjectFromQueryString: {ex.Message}"); }
+
+            try
+            {
+                if (vals != null && vals[root] is string node)
+                {
+                    var jsonObject = System.Text.Json.Nodes.JsonObject.Parse(node) as System.Text.Json.Nodes.JsonObject;
+                    if (jsonObject is not null)
+                    {
+                        NameValueCollection vals2 = new NameValueCollection(jsonObject.Count);
+
+                        if (jsonObject.ContainsKey(key) && jsonObject[key] is System.Text.Json.Nodes.JsonValue jvalue && jvalue.TryGetValue<string>(out string? value))
+                            vals2.Add(key, value);
+
+                        return vals2;
+                    }
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine($"ExtractJsonObjectFromQueryString: {ex.Message}"); }
+
+            return null;
+
+            // If you wanted to return or create a JsonObject...
+            var jObj = new System.Text.Json.Nodes.JsonObject
+            {
+                { "key1", "value1" },
+                { "key2", "value2" },
+                { "key3", "value3" },
+                { "....", "......" },
+            };
+        }
+
+        /// <summary>
+        /// Similar to <see cref="Windows.System.Launcher.LaunchUriAsync(Uri)"/>
+        /// </summary>
+        /// <param name="uriFilePath"></param>
+        public static void RunFileUsingProtocolHandler(Uri uriFilePath)
+        {
+            if (uriFilePath is null)
+                return;
+
+            RunFileUsingProtocolHandler($"{uriFilePath}");
+        }
+
+        /// <summary>
+        /// Similar to <see cref="Windows.System.Launcher.LaunchUriAsync(Uri)"/>
+        /// </summary>
+        /// <param name="uriFilePath"></param>
+        public static async Task RunFileUsingProtocolHandlerAsync(Uri uriFilePath)
+        {
+            if (uriFilePath is null)
+                return;
+
+            await RunFileUsingProtocolHandlerAsync($"{uriFilePath}");
+        }
+
+        /// <summary>
+        /// Similar to <see cref="Windows.System.Launcher.LaunchUriAsync(Uri)"/>
+        /// https://learn.microsoft.com/en-us/windows/win32/search/-search-3x-wds-extidx-prot-implementing
+        /// </summary>
+        /// <param name="uriFilePath"></param>
+        public static void RunFileUsingProtocolHandler(string uriFilePath)
+        {
+            if (string.IsNullOrEmpty(uriFilePath))
+                return;
+
+            try
+            {
+                var process = new System.Diagnostics.Process();
+                process.StartInfo.FileName = "rundll32.exe";
+                // Passing is limited to 2083 characters (including "https://")
+                process.StartInfo.Arguments = $"url.dll,FileProtocolHandler {uriFilePath}";
+                process.StartInfo.UseShellExecute = true;
+                process.Start();
+            }
+            catch (Exception ex) { Debug.WriteLine($"RunFileUsingProtocolHandler: {ex.Message}"); }
+        }
+
+        /// <summary>
+        /// Similar to <see cref="Windows.System.Launcher.LaunchUriAsync(Uri)"/>
+        /// https://learn.microsoft.com/en-us/windows/win32/search/-search-3x-wds-extidx-prot-implementing
+        /// </summary>
+        /// <param name="uriFilePath"></param>
+        public static async Task RunFileUsingProtocolHandlerAsync(string uriFilePath)
+        {
+            if (string.IsNullOrEmpty(uriFilePath))
+                return;
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    var process = new System.Diagnostics.Process();
+                    process.StartInfo.FileName = "rundll32.exe";
+                    // Passing is limited to 2083 characters (including "https://")
+                    process.StartInfo.Arguments = $"url.dll,FileProtocolHandler {uriFilePath}";
+                    process.StartInfo.UseShellExecute = true;
+                    process.Start();
+                }
+                catch (Exception ex) { Debug.WriteLine($"RunFileUsingProtocolHandler: {ex.Message}"); }
+            });
         }
     }
 }

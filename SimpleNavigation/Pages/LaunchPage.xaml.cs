@@ -13,8 +13,10 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 
 using Windows.Foundation;
@@ -35,6 +37,7 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
     public static event EventHandler<Message>? PostMessageEvent;
 
     #region [Properties]
+    bool shiftAnimationRunning = false;
     string fileToLaunch = @"Assets\Background.png";
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -253,19 +256,41 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         cbUris.ItemsSource = UriCommands;
         cbUris.SelectedIndex = 0;
         url.Text = "https://learn.microsoft.com/en-us/windows/uwp/launch-resume/launch-settings-app#accounts";
-        this.Loaded += (_, _) => 
-        { 
-            ttSettings.IsOpen = true;
+        this.Loaded += LaunchPage_Loaded;
+        this.SizeChanged += LaunchPage_SizeChanged;
+        ShiftStoryboard.Completed += ShiftStoryboard_Completed;
 
-            //using (var file = File.AppendText(Path.Combine(Directory.GetCurrentDirectory(), "Cleaned.txt")))
-            //{
-            //    foreach (var name in UriCommands)
-            //    {
-            //        file.WriteLine($"\"{name.Trim()}\",");
-            //    }
-            //    file.Flush();
-            //}
-        };
+        //using (var file = File.AppendText(Path.Combine(Directory.GetCurrentDirectory(), "Cleaned.txt")))
+        //{
+        //    foreach (var name in UriCommands)
+        //        file.WriteLine($"\"{name.Trim()}\",");
+        //}
+    }
+
+    void ShiftStoryboard_Completed(object? sender, object e)
+    {
+        if (shiftAnimationRunning)
+            shiftAnimationRunning = false;
+    }
+
+    void LaunchPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        ttSettings.IsOpen = true;
+
+        var appTheme = (Application.Current as App)?.RequestedTheme;
+        if (appTheme != null && appTheme == ApplicationTheme.Dark)
+            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 30, G = 30, B = 30 }, 0.8F, Extensions.CoinFlip());
+        else
+            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 245, G = 245, B = 245 }, 0.8F, Extensions.CoinFlip());
+    }
+
+    void LaunchPage_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var appTheme = (Application.Current as App)?.RequestedTheme;
+        if (appTheme != null && appTheme == ApplicationTheme.Dark)
+            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 30, G = 30, B = 30 }, 0.8F, Extensions.CoinFlip());
+        else
+            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 245, G = 245, B = 245 }, 0.8F, Extensions.CoinFlip());
     }
 
     /// <summary>
@@ -291,11 +316,12 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         base.OnNavigatedTo(e);
     }
 
-	/// <summary>
-	/// https://learn.microsoft.com/en-us/windows/uwp/launch-resume/launch-settings-app
-	/// </summary>
-	async void Random_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// https://learn.microsoft.com/en-us/windows/uwp/launch-resume/launch-settings-app#ms-settings-uri-scheme-reference
+    /// </summary>
+    async void Random_Click(object sender, RoutedEventArgs e)
     {
+        CloseTeachingTipIfOpen();
         IsBusy = true;
         try
         {
@@ -314,8 +340,12 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         IsBusy = false;
     }
 
+    /// <summary>
+    /// https://learn.microsoft.com/en-us/windows/uwp/launch-resume/launch-settings-app#ms-settings-uri-scheme-reference
+    /// </summary>
 	async void Selected_Click(object sender, RoutedEventArgs e)
 	{
+        CloseTeachingTipIfOpen();
         IsBusy = true;
 		try
 		{
@@ -354,6 +384,8 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
     /// </summary>
     async void LaunchFileOpenWith(object sender, RoutedEventArgs e)
     {
+        CloseTeachingTipIfOpen();
+
         // First, get the image file from the package's image directory.
         var file = await GetFileToLaunch();
 
@@ -567,6 +599,12 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
             SendMessage(iHandle, WM_SYSCOMMAND, SC_CLOSE, 0);
     }
 
+    void CloseTeachingTipIfOpen()
+    {
+        if (ttSettings.IsOpen)
+            ttSettings.IsOpen = false;
+    }
+
     #region [AutoSuggest]
     void AutoSuggestBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
@@ -638,4 +676,228 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     public static extern int SendMessage(int hWnd, uint Msg, int wParam, int lParam);
     #endregion
+
+    #region [Vector Animations]
+    bool _testOpacityAnimation = false;
+    float _springMultiplier = 1.1f;
+    Microsoft.UI.Composition.ScalarKeyFrameAnimation _scalarAnimation;
+    Microsoft.UI.Composition.Vector3KeyFrameAnimation _offsetAnimation;
+    Microsoft.UI.Composition.SpringVector3NaturalMotionAnimation? _springAnimation;
+    Microsoft.UI.Composition.Compositor _compositor = Microsoft.UI.Xaml.Media.CompositionTarget.GetCompositorForCurrentThread(); //App.CurrentWindow.Compositor;
+    void CreateOrUpdateSpringAnimation(float finalValue)
+    {
+        if (_springAnimation == null)
+        {
+            // When updating targets such as "Position" use a Vector3KeyFrameAnimation.
+            //var positionAnim = _compositor.CreateVector3KeyFrameAnimation();
+            // When updating targets such as "Opacity" use a ScalarKeyFrameAnimation.
+            //var sizeAnim = _compositor.CreateScalarKeyFrameAnimation();
+
+            _springAnimation = _compositor.CreateSpringVector3Animation();
+            _springAnimation.Target = "Scale";
+            _springAnimation.InitialVelocity = new System.Numerics.Vector3(_springMultiplier * 3);
+            _springAnimation.DampingRatio = 0.4f;
+            _springAnimation.Period = TimeSpan.FromMilliseconds(50);
+        }
+        _springAnimation.FinalValue = new System.Numerics.Vector3(finalValue);
+    }
+
+    void CreateOrUpdateScalarAnimation(bool fromZeroToOne)
+    {
+        if (_scalarAnimation == null)
+        {
+            _scalarAnimation = _compositor.CreateScalarKeyFrameAnimation();
+            _scalarAnimation.Target = "Opacity";
+            _scalarAnimation.Direction = Microsoft.UI.Composition.AnimationDirection.Normal;
+            //_scalarAnimation.IterationBehavior = Microsoft.UI.Composition.AnimationIterationBehavior.Forever;
+            _scalarAnimation.Duration = TimeSpan.FromMilliseconds(1500);
+        }
+        
+        if (fromZeroToOne)
+        {
+            _scalarAnimation.InsertKeyFrame(0f, 0.4f);
+            _scalarAnimation.InsertKeyFrame(1f, 1f);
+        }
+        else
+        {
+            _scalarAnimation.InsertKeyFrame(0f, 1f);
+            _scalarAnimation.InsertKeyFrame(1f, 0.4f);
+        }
+    }
+
+    /// <summary>
+    /// Not tested.
+    /// </summary>
+    void CreateOrUpdateVector3Animation()
+    {
+        if (_offsetAnimation == null)
+        {
+            _offsetAnimation = _compositor.CreateVector3KeyFrameAnimation();
+            _offsetAnimation.Target = "Offset";
+            _offsetAnimation.IterationBehavior = Microsoft.UI.Composition.AnimationIterationBehavior.Forever;
+            _offsetAnimation.Duration = TimeSpan.FromMilliseconds(500);
+            _offsetAnimation.InsertKeyFrame(0.0f, new System.Numerics.Vector3(0, 0, 0));
+            _offsetAnimation.InsertKeyFrame(0.5f, new System.Numerics.Vector3(100, 0, 0));
+            _offsetAnimation.InsertKeyFrame(1.0f, new System.Numerics.Vector3(0, 0, 0));
+        }
+    }
+
+    /// <summary>
+    /// This needs fine tuning.
+    /// </summary>
+    void OpenWithButtonPointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        //ShiftStoryboard.Children[0].SetValue(DoubleAnimation.FromProperty, Translation1.Y);
+        //double newPos = -14;
+        //if (Translation1.Y > newPos && Translation1.Y < -0.1) // stuck?
+        //{
+        //    newPos = Math.Abs(Translation1.Y);
+        //}
+        //ShiftStoryboard.Children[0].SetValue(DoubleAnimation.ToProperty, newPos);
+
+        if (!shiftAnimationRunning)
+        {
+            shiftAnimationRunning = true;
+            // Start the animation.
+            ShiftStoryboard.Begin();
+        }
+        else
+        {
+            Debug.WriteLine($"🡒 Skipping '{nameof(ShiftStoryboard)}'");
+        }
+    }
+
+    void OpenWithButtonPointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        ColorStoryboard.Begin();
+    }
+
+    void Reveal_Click(object sender, RoutedEventArgs e)
+    {
+        CloseTeachingTipIfOpen();
+
+        if (_destinationSprite.IsVisible)
+            _destinationSprite.IsVisible = false;
+        else
+        {
+            // Animate from transparent to fully opaque or translucent (depending on brush and image)
+            Microsoft.UI.Composition.ScalarKeyFrameAnimation showAnimation = _compositor.CreateScalarKeyFrameAnimation();
+            showAnimation.InsertKeyFrame(0f, 0f);
+            showAnimation.InsertKeyFrame(1f, 1f);
+            showAnimation.Duration = TimeSpan.FromMilliseconds(1250);
+            _destinationSprite.StartAnimation("Opacity", showAnimation);
+            _destinationSprite.IsVisible = true;
+        }
+    }
+
+    void ButtonPointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        var btn = sender as Button;
+        if (btn != null)
+        {
+            CreateOrUpdateSpringAnimation(_springMultiplier);
+            // We'll set the CenterPoint so the SpringAnimation does not start from offset 0,0.
+            (sender as UIElement).CenterPoint = new System.Numerics.Vector3((float)(btn.ActualWidth / 2.0), (float)(btn.ActualHeight / 2.0), 1f);
+            (sender as UIElement)?.StartAnimation(_springAnimation);
+
+            if (_testOpacityAnimation)
+            {
+                CreateOrUpdateScalarAnimation(true);
+                (sender as UIElement)?.StartAnimation(_scalarAnimation);
+            }
+        }
+    }
+
+    void ButtonPointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        var btn = sender as Button;
+        if (btn != null)
+        { 
+            CreateOrUpdateSpringAnimation(1.0f);
+            // We'll set the CenterPoint so the SpringAnimation does not start from offset 0,0.
+            (sender as UIElement).CenterPoint = new System.Numerics.Vector3((float)(btn.ActualWidth / 2.0), (float)(btn.ActualHeight / 2.0), 1f);
+            (sender as UIElement)?.StartAnimation(_springAnimation);
+
+            if (_testOpacityAnimation)
+            {
+                CreateOrUpdateScalarAnimation(false);
+                (sender as UIElement)?.StartAnimation(_scalarAnimation);
+            }
+        }
+    }
+
+    /// <summary>
+    /// KeyFrameAnimation using <see cref="ElementCompositionPreview.GetElementVisual(UIElement)"/>.
+    /// This employs the control's <see cref="Microsoft.UI.Composition.Compositor"/> to create
+    /// the <see cref="Microsoft.UI.Composition.Vector3KeyFrameAnimation"/> for Offset property.
+    /// </summary>
+    void AnimateButtonOffset(Button button, Microsoft.UI.Composition.AnimationIterationBehavior behavior)
+    {
+        // Get the Visual for the button.
+        var visual = ElementCompositionPreview.GetElementVisual(button);
+
+        // Get the Compositor from the Visual.
+        var compositor = visual?.Compositor;
+
+        // Create a Vector3KeyFrameAnimation.
+        var animation = compositor?.CreateVector3KeyFrameAnimation();
+
+        if (animation != null)
+        {
+            // Stop any current animation.
+            visual?.StopAnimation("Offset");
+
+            // Set the property to animate.
+            animation.Target = "Offset";
+
+            // Add keyframes to move the button left and right.
+            animation.InsertKeyFrame(0.0f, new System.Numerics.Vector3(0, 0, 0));
+            animation.InsertKeyFrame(0.5f, new System.Numerics.Vector3(100, 0, 0));
+            animation.InsertKeyFrame(1.0f, new System.Numerics.Vector3(0, 0, 0));
+
+            // Set the duration and repeat behavior.
+            animation.Duration = TimeSpan.FromMilliseconds(800);
+            animation.IterationBehavior = behavior;
+
+            // Start the animation.
+            visual?.StartAnimation("Offset", animation);
+        }
+    }
+    #endregion
+
+    ElementTheme theme = ElementTheme.Default;
+    Microsoft.UI.Composition.SpriteVisual _destinationSprite;
+    void SetupCompositionElement(Windows.UI.Color shadowColor, float shadowOpacity = 1F, bool useImageForShadowMask = false)
+    {
+        // Get the current compositor
+        _compositor = ElementCompositionPreview.GetElementVisual(this).Compositor;
+        // Create surface brush and load image...
+        Microsoft.UI.Composition.CompositionSurfaceBrush surfaceBrush = _compositor.CreateSurfaceBrush();
+        // Use an image as the shadow...
+        surfaceBrush.Surface = LoadedImageSurface.StartLoadFromUri(new Uri("ms-appx:///Assets/Background.png"));
+
+        // Create the destination sprite, sized to cover the entire list
+        _destinationSprite = _compositor.CreateSpriteVisual();
+        _destinationSprite.Size = new System.Numerics.Vector2((float)rootGrid.ActualWidth, (float)rootGrid.ActualHeight);
+        _destinationSprite.Brush = surfaceBrush;
+
+        // Create drop shadow...
+        Microsoft.UI.Composition.DropShadow shadow = _compositor.CreateDropShadow();
+        shadow.Opacity = shadowOpacity;
+        shadow.Color = shadowColor;
+        shadow.BlurRadius = 200F;
+        shadow.Offset = new System.Numerics.Vector3(0, 0, -1);
+        if (useImageForShadowMask)
+        {   // Specify mask policy for shadow...
+            shadow.SourcePolicy = Microsoft.UI.Composition.CompositionDropShadowSourcePolicy.InheritFromVisualContent;
+        }
+        // Associate shadow with visual...
+        _destinationSprite.Shadow = shadow;
+
+        // Start out with the destination layer invisible to avoid any cost until necessary
+        _destinationSprite.IsVisible = false;
+
+        // Apply the visual element
+        ElementCompositionPreview.SetElementChildVisual(rootGrid, _destinationSprite);
+    }
 }

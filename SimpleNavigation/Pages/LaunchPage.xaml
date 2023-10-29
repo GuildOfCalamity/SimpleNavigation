@@ -13,7 +13,7 @@
     NavigationCacheMode="Enabled"
     mc:Ignorable="d">
 
-    <Grid RowSpacing="20">
+    <Grid x:Name="rootGrid" RowSpacing="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -102,24 +102,95 @@
         <Grid
             Grid.Row="2"
             Grid.Column="0"
-            ColumnSpacing="12">
+            ColumnSpacing="13"
+            RowSpacing="13">
+            <Grid.Resources>
+                <ThemeShadow x:Name="SharedShadow" />
+                <Storyboard x:Name="ShiftStoryboard" AutoReverse="True">
+                    <DoubleAnimation
+                        Storyboard.TargetName="Translation1"
+                        Storyboard.TargetProperty="Y"
+                        From="0"
+                        To="-14"
+                        Duration="0:0:0.10">
+                        <DoubleAnimation.EasingFunction>
+                            <CircleEase EasingMode="EaseInOut" />
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </Grid.Resources>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Button
+                Grid.Row="0"
                 Grid.Column="0"
+                Padding="7,5"
                 Click="Selected_Click"
-                Content="Launch Selected" />
+                Content="Launch Selected"
+                PointerEntered="ButtonPointerEntered"
+                PointerExited="ButtonPointerExited"
+                Shadow="{StaticResource SharedShadow}"
+                ToolTipService.ToolTip="Open the selected Windows setting dialog"
+                Translation="0,0,32" />
             <Button
+                Grid.Row="0"
                 Grid.Column="1"
+                Padding="7,5"
                 Click="Random_Click"
-                Content="Launch Random" />
+                Content="Launch Random"
+                PointerEntered="ButtonPointerEntered"
+                PointerExited="ButtonPointerExited"
+                Shadow="{StaticResource SharedShadow}"
+                ToolTipService.ToolTip="Open a random Windows setting dialog"
+                Translation="0,0,32" />
             <Button
-                Grid.Column="2"
+                Grid.Row="1"
+                Grid.Column="0"
+                Padding="7,5"
+                Click="Reveal_Click"
+                Content="Reveal Sprite"
+                PointerEntered="ButtonPointerEntered"
+                PointerExited="ButtonPointerExited"
+                Shadow="{StaticResource SharedShadow}"
+                ToolTipService.ToolTip="Demo CompositionSurfaceBrush"
+                Translation="0,0,32" />
+            <Button
+                x:Name="btnOpenWith"
+                Grid.Row="1"
+                Grid.Column="1"
+                Padding="7,5"
                 Click="LaunchFileOpenWith"
-                Content="Open With" />
+                Content="Open With"
+                PointerEntered="OpenWithButtonPointerEntered"
+                PointerExited="OpenWithButtonPointerExited"
+                Shadow="{StaticResource SharedShadow}"
+                ToolTipService.ToolTip="Demo Windows.System.Launcher()"
+                Translation="0,0,32">
+                <Button.RenderTransform>
+                    <TranslateTransform x:Name="Translation1" />
+                </Button.RenderTransform>
+                <Button.Background>
+                    <SolidColorBrush x:Name="bgBrush" />
+                </Button.Background>
+                <Button.Resources>
+                    <StaticResource x:Key="ButtonBackground" ResourceKey="{ThemeResource BackgroundBrush}" />
+                    <Storyboard x:Name="ColorStoryboard">
+                        <ColorAnimation
+                            AutoReverse="True"
+                            Storyboard.TargetName="bgBrush"
+                            Storyboard.TargetProperty="Color"
+                            From="{ThemeResource BackgroundBrush}"
+                            To="LightBlue"
+                            Duration="0:0:0.31" />
+                    </Storyboard>
+                </Button.Resources>
+            </Button>
         </Grid>
 
         <AutoSuggestBox
