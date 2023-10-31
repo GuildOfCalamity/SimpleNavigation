@@ -71,6 +71,8 @@
 
                     <ResourceDictionary.ThemeDictionaries>
                         <ResourceDictionary x:Key="Dark">
+                            <Color x:Key="ButtonForeground1">#1FA0FF</Color>
+                            <Color x:Key="TextFillColorPrimary1">#F0F0F0</Color>
                             <Brush x:Key="GlowBrush">#CF80808F</Brush>
                             <Brush x:Key="BackgroundBrush">#AA202020</Brush>
                             <SolidColorBrush
@@ -101,6 +103,8 @@
                                 TintOpacity="0.8" />
                         </ResourceDictionary>
                         <ResourceDictionary x:Key="Light">
+                            <Color x:Key="TextFillColorPrimary1">#090909</Color>
+                            <Color x:Key="ButtonForeground1">#1F60BF</Color>
                             <Brush x:Key="GlowBrush">#CF20202F</Brush>
                             <Brush x:Key="BackgroundBrush">#AAF0F0F0</Brush>
                             <SolidColorBrush

@@ -106,16 +106,30 @@
             RowSpacing="13">
             <Grid.Resources>
                 <ThemeShadow x:Name="SharedShadow" />
-                <Storyboard x:Name="ShiftStoryboard" AutoReverse="True">
+                <Storyboard x:Name="UpStoryboard" AutoReverse="True">
                     <DoubleAnimation
+                        SpeedRatio="0.8"
                         Storyboard.TargetName="Translation1"
                         Storyboard.TargetProperty="Y"
                         From="0"
-                        To="-14"
-                        Duration="0:0:0.10">
-                        <DoubleAnimation.EasingFunction>
+                        To="-6"
+                        Duration="0:0:0.03">
+                        <!--<DoubleAnimation.EasingFunction>
                             <CircleEase EasingMode="EaseInOut" />
-                        </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation.EasingFunction>-->
+                    </DoubleAnimation>
+                </Storyboard>
+                <Storyboard x:Name="DownStoryboard" AutoReverse="True">
+                    <DoubleAnimation
+                        SpeedRatio="0.8"
+                        Storyboard.TargetName="Translation1"
+                        Storyboard.TargetProperty="Y"
+                        From="0"
+                        To="-3"
+                        Duration="0:0:0.03">
+                        <!--<DoubleAnimation.EasingFunction>
+                            <CircleEase EasingMode="EaseInOut" />
+                        </DoubleAnimation.EasingFunction>-->
                     </DoubleAnimation>
                 </Storyboard>
             </Grid.Resources>
@@ -175,19 +189,35 @@
                 <Button.RenderTransform>
                     <TranslateTransform x:Name="Translation1" />
                 </Button.RenderTransform>
-                <Button.Background>
-                    <SolidColorBrush x:Name="bgBrush" />
-                </Button.Background>
+                <Button.Foreground>
+                    <SolidColorBrush x:Name="fgBrush" />
+                </Button.Foreground>
                 <Button.Resources>
+                    <!--
+                    ??? Why do these cause the app to fast-fail ???
                     <StaticResource x:Key="ButtonBackground" ResourceKey="{ThemeResource BackgroundBrush}" />
-                    <Storyboard x:Name="ColorStoryboard">
+                    <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="{ThemeResource BackgroundBrush}" />
+                    <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="{ThemeResource BackgroundBrush}" />
+                    <StaticResource x:Key="ButtonForeground" ResourceKey="{ThemeResource ButtonForeground1}" />
+                    <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="{ThemeResource BackgroundBrush}" />
+                    <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="{ThemeResource BackgroundBrush}" />
+                    -->
+                    <Storyboard x:Name="ToColorStoryboard">
                         <ColorAnimation
-                            AutoReverse="True"
-                            Storyboard.TargetName="bgBrush"
+                            AutoReverse="False"
+                            Storyboard.TargetName="fgBrush"
                             Storyboard.TargetProperty="Color"
-                            From="{ThemeResource BackgroundBrush}"
-                            To="LightBlue"
-                            Duration="0:0:0.31" />
+                            To="DodgerBlue"
+                            Duration="0:0:0.55" />
+                    </Storyboard>
+                    <Storyboard x:Name="FromColorStoryboard">
+                        <ColorAnimation
+                            AutoReverse="False"
+                            Storyboard.TargetName="fgBrush"
+                            Storyboard.TargetProperty="Color"
+                            From="{ThemeResource TextFillColorPrimary1}"
+                            To="DodgerBlue"
+                            Duration="0:0:0.55" />
                     </Storyboard>
                 </Button.Resources>
             </Button>

@@ -71,6 +71,8 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         }
     }
 
+    private bool _useShadowMask = Extensions.CoinFlip();
+
     // I have condensed this list, but there are more. The sampling is sorted by category.
     // https://www.itechtics.com/windows-uri-commands/
     public List<string> UriCommands = new() {
@@ -258,7 +260,8 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         url.Text = "https://learn.microsoft.com/en-us/windows/uwp/launch-resume/launch-settings-app#accounts";
         this.Loaded += LaunchPage_Loaded;
         this.SizeChanged += LaunchPage_SizeChanged;
-        ShiftStoryboard.Completed += ShiftStoryboard_Completed;
+        UpStoryboard.Completed += UpStoryboard_Completed;
+        DownStoryboard.Completed += DownStoryboard_Completed;
 
         //using (var file = File.AppendText(Path.Combine(Directory.GetCurrentDirectory(), "Cleaned.txt")))
         //{
@@ -267,30 +270,42 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         //}
     }
 
-    void ShiftStoryboard_Completed(object? sender, object e)
+    void DownStoryboard_Completed(object? sender, object e)
     {
-        if (shiftAnimationRunning)
-            shiftAnimationRunning = false;
+        //Storyboard? sb = sender as Storyboard;
+        Debug.WriteLine($"🡒 Completed '{nameof(DownStoryboard)}'");
     }
 
+    void UpStoryboard_Completed(object? sender, object e)
+    {
+        if (shiftAnimationRunning)
+        {
+            shiftAnimationRunning = false;
+            DownStoryboard.Begin();
+        }
+    }
+    
     void LaunchPage_Loaded(object sender, RoutedEventArgs e)
     {
         ttSettings.IsOpen = true;
 
         var appTheme = (Application.Current as App)?.RequestedTheme;
         if (appTheme != null && appTheme == ApplicationTheme.Dark)
-            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 30, G = 30, B = 30 }, 0.8F, Extensions.CoinFlip());
+            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 30, G = 30, B = 30 }, 0.8F, useImageForShadowMask: _useShadowMask);
         else
-            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 245, G = 245, B = 245 }, 0.8F, Extensions.CoinFlip());
+            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 245, G = 245, B = 245 }, 0.8F, useImageForShadowMask: _useShadowMask);
+
+        // Prime the button foreground.
+        ToColorStoryboard.Begin();
     }
 
     void LaunchPage_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         var appTheme = (Application.Current as App)?.RequestedTheme;
         if (appTheme != null && appTheme == ApplicationTheme.Dark)
-            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 30, G = 30, B = 30 }, 0.8F, Extensions.CoinFlip());
+            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 30, G = 30, B = 30 }, 0.8F, useImageForShadowMask: _useShadowMask);
         else
-            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 245, G = 245, B = 245 }, 0.8F, Extensions.CoinFlip());
+            SetupCompositionElement(new Windows.UI.Color() { A = 255, R = 245, G = 245, B = 245 }, 0.8F, useImageForShadowMask: _useShadowMask);
     }
 
     /// <summary>
@@ -747,6 +762,8 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
     /// </summary>
     void OpenWithButtonPointerEntered(object sender, PointerRoutedEventArgs e)
     {
+        ToColorStoryboard.Begin();
+        
         //ShiftStoryboard.Children[0].SetValue(DoubleAnimation.FromProperty, Translation1.Y);
         //double newPos = -14;
         //if (Translation1.Y > newPos && Translation1.Y < -0.1) // stuck?
@@ -758,18 +775,18 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         if (!shiftAnimationRunning)
         {
             shiftAnimationRunning = true;
-            // Start the animation.
-            ShiftStoryboard.Begin();
+            UpStoryboard.Begin();
         }
         else
         {
-            Debug.WriteLine($"🡒 Skipping '{nameof(ShiftStoryboard)}'");
+            Debug.WriteLine($"🡒 Skipping '{nameof(UpStoryboard)}'");
         }
     }
 
     void OpenWithButtonPointerExited(object sender, PointerRoutedEventArgs e)
     {
-        ColorStoryboard.Begin();
+        ToColorStoryboard.SkipToFill();
+        FromColorStoryboard.Begin();
     }
 
     void Reveal_Click(object sender, RoutedEventArgs e)
@@ -867,7 +884,7 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
 
     ElementTheme theme = ElementTheme.Default;
     Microsoft.UI.Composition.SpriteVisual _destinationSprite;
-    void SetupCompositionElement(Windows.UI.Color shadowColor, float shadowOpacity = 1F, bool useImageForShadowMask = false)
+    void SetupCompositionElement(Windows.UI.Color shadowColor, float shadowOpacity = 1F, float shadowBlurRadius = 200F, bool useImageForShadowMask = false)
     {
         // Get the current compositor
         _compositor = ElementCompositionPreview.GetElementVisual(this).Compositor;
@@ -885,7 +902,7 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
         Microsoft.UI.Composition.DropShadow shadow = _compositor.CreateDropShadow();
         shadow.Opacity = shadowOpacity;
         shadow.Color = shadowColor;
-        shadow.BlurRadius = 200F;
+        shadow.BlurRadius = shadowBlurRadius;
         shadow.Offset = new System.Numerics.Vector3(0, 0, -1);
         if (useImageForShadowMask)
         {   // Specify mask policy for shadow...
