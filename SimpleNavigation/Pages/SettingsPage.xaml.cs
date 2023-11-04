@@ -107,7 +107,7 @@ public sealed partial class SettingsPage : Page
         {
             await Task.Delay(500);
             var data = Extensions.GatherReferenceAssemblies(true);
-            tbReferences.DispatcherQueue.TryEnqueue(() => { tbReferences.Text = $"{data}"; });
+            tbReferences.DispatcherQueue?.TryEnqueue(() => { tbReferences.Text = $"{data}"; });
             //await StoryboardPath.BeginAsync();
         });
 
@@ -116,7 +116,7 @@ public sealed partial class SettingsPage : Page
 
         if (ConfigHelper.DoesConfigExist())
         {
-            tbConfig.DispatcherQueue.TryEnqueue(async () =>
+            tbConfig.DispatcherQueue?.TryEnqueue(async () =>
             {
                 try
                 {
@@ -145,7 +145,6 @@ public sealed partial class SettingsPage : Page
     {
         if (e.Parameter != null && e.Parameter is SystemState sys)
         {
-            // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
             Debug.WriteLine($"You sent '{sys.Title}'");
             landing.Text = $"I'm on page {sys.Title}";
             PostMessageEvent?.Invoke(this, new Message

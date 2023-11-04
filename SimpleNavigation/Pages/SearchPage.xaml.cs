@@ -27,7 +27,6 @@ namespace SimpleNavigation;
 public sealed partial class SearchPage : Page, INotifyPropertyChanged
 {
     #region [Properties]
-
     /// <summary>
     /// An event that the main page can subscribe to.
     /// </summary>
@@ -125,7 +124,6 @@ public sealed partial class SearchPage : Page, INotifyPropertyChanged
     {
         if (e.Parameter != null && e.Parameter is SystemState sys)
         {
-            // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
             Debug.WriteLine($"You sent '{sys.Title}'");
             PostMessageEvent?.Invoke(this, new Message
             {

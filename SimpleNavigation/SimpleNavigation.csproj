@@ -74,6 +74,7 @@
     <None Remove="Assets\FileIcon.png" />
     <None Remove="Assets\gear1.png" />
     <None Remove="Assets\gear2.png" />
+    <None Remove="Assets\InfoIcon.png" />
     <None Remove="Assets\Navigation.ico" />
     <None Remove="Assets\Navigation.png" />
     <None Remove="Assets\Notice.png" />

@@ -86,7 +86,6 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
     {
         if (e.Parameter != null && e.Parameter is SystemState sys)
         {
-            // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
             Debug.WriteLine($"You sent '{sys.Title}'");
             landing.Text = $"I'm on page {sys.Title}";
             PostMessageEvent?.Invoke(this, new Message
@@ -112,7 +111,7 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
                 foreach (var m in Extensions.GenerateMessages())
                 {
                     await Task.Delay(30);
-                    lvMessage.DispatcherQueue.TryEnqueue(() => { Samples.Add(m); });
+                    lvMessage.DispatcherQueue?.TryEnqueue(() => { Samples.Add(m); });
                 }
             });
         }
@@ -153,7 +152,7 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
         filter = args.QueryText;
 
         // Our Message type does not inherit from ObservableObject, so we'll need to trigger a ListView refresh.
-        lvMessage.DispatcherQueue.TryEnqueue(() =>
+        lvMessage.DispatcherQueue?.TryEnqueue(() =>
         {
             lvMessage.ItemsSource = null;
             lvMessage.ItemsSource = Samples;
@@ -199,7 +198,7 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
             //    // If not the focus of the ContentDialog's TextBox may fail.
             //    // This is caused by the changing of the PointerPressed event to asynchronous.
             //    await Task.Delay(150);
-            //    NoticeDialog.DispatcherQueue.TryEnqueue(async () =>
+            //    NoticeDialog.DispatcherQueue?.TryEnqueue(async () =>
             //    {
             //        await OpenNoticeDialog(msg);
             //    });
@@ -213,7 +212,7 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
                 // If not the focus of the ContentDialog's TextBox may fail.
                 // This is caused by the changing of the PointerPressed event to asynchronous.
                 await Task.Delay(150);
-                NoticeDialog.DispatcherQueue.TryEnqueue(async () =>
+                NoticeDialog.DispatcherQueue?.TryEnqueue(async () =>
                 {
                     await OpenNoticeDialogWithCommandParam(msg);
                 });
@@ -242,7 +241,7 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
         if (copyOfMessage.Content != modified.Content || copyOfMessage.Time != modified.Time)
         {
             // Our Message type does not inherit from ObservableObject, so we'll need to trigger a ListView refresh.
-            lvMessage.DispatcherQueue.TryEnqueue(() =>
+            lvMessage.DispatcherQueue?.TryEnqueue(() =>
             {
                 lvMessage.ItemsSource = null;
                 lvMessage.ItemsSource = Samples;
@@ -299,7 +298,7 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
         if (copyOfMessage.Content != modified.Content || copyOfMessage.Time != modified.Time)
         {
             // Our Message type does not inherit from ObservableObject, so we'll need to trigger a ListView refresh.
-            lvMessage.DispatcherQueue.TryEnqueue(() =>
+            lvMessage.DispatcherQueue?.TryEnqueue(() =>
             {
                 lvMessage.ItemsSource = null;
                 lvMessage.ItemsSource = Samples;

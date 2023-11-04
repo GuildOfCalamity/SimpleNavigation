@@ -84,41 +84,44 @@ public partial class App : Application
     /// <param name="args">Details about the launch request and process.</param>
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        _window = new MainWindow();
-
-        // Save the FrameworkElement for future content dialogs.
-        App.MainRoot = _window.Content as FrameworkElement;
-        App.MainWindow = _window;
-        App.WindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(_window);
-
-        AppWin = _window.GetAppWindow();
-        if (AppWin != null)
+        using (var sc = new StopClock("OnLaunched"))
         {
-            // Unfortunately MS decided to remove the closing event from the
-            // Window class, but we can get it back using the AppWindow class.
-            AppWin.Closing += (s, e) => { App.IsClosing = true; };
+            _window = new MainWindow();
 
-            // NOTE: png to ico converter https://www.img2go.com/convert/png-to-ico
+            // Save the FrameworkElement for future content dialogs.
+            App.MainRoot = _window.Content as FrameworkElement;
+            App.MainWindow = _window;
+            App.WindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(_window);
 
-            if (App.IsPackaged)
-                AppWin.SetIcon(System.IO.Path.Combine(Windows.ApplicationModel.Package.Current.InstalledLocation.Path, "Assets/Navigation.ico"));
-            else
-                AppWin.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets/Navigation.ico"));
+            AppWin = _window.GetAppWindow();
+            if (AppWin != null)
+            {
+                // Unfortunately MS decided to remove the closing event from the
+                // Window class, but we can get it back using the AppWindow class.
+                AppWin.Closing += (s, e) => { App.IsClosing = true; };
+
+                // NOTE: png to ico converter https://www.img2go.com/convert/png-to-ico
+
+                if (App.IsPackaged)
+                    AppWin.SetIcon(System.IO.Path.Combine(Windows.ApplicationModel.Package.Current.InstalledLocation.Path, "Assets/Navigation.ico"));
+                else
+                    AppWin.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets/Navigation.ico"));
+            }
+
+            MainDisplay = _window.GetDisplayArea();
+
+            _window.Activate();
+            _window.ResizeWindow(1100, 700);
+            _window.CenterWindow();
+
+            if (Debugger.IsAttached)
+                DebugMode = true;
+
+            #region [Changing the current process priority]
+            //Process pro = Process.GetCurrentProcess();
+            //if (pro != null) { pro.PriorityClass = ProcessPriorityClass.Idle; }
+            #endregion
         }
-        
-        MainDisplay = _window.GetDisplayArea();
-
-        _window.Activate();
-        _window.ResizeWindow(1100, 700);
-        _window.CenterWindow();
-
-        if (Debugger.IsAttached)
-            DebugMode = true;
-
-        #region [Changing the current process priority]
-        //Process pro = Process.GetCurrentProcess();
-        //if (pro != null) { pro.PriorityClass = ProcessPriorityClass.Idle; }
-        #endregion
     }
 
     #region [Domain Events]

@@ -162,6 +162,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         SearchPage.PostMessageEvent += MainPage_PostMessageEvent;
         SettingsPage.PostMessageEvent += MainPage_PostMessageEvent;
         TestPage.PostMessageEvent += MainPage_PostMessageEvent;
+        AnimationPage.PostMessageEvent += MainPage_PostMessageEvent;
         #endregion
 
         #region [Superfluous]
@@ -193,7 +194,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
 
     void ShowMessage(string message, InfoBarSeverity severity)
     {
-        infoBar.DispatcherQueue.TryEnqueue(() =>
+        infoBar.DispatcherQueue?.TryEnqueue(() =>
         {
             infoBar.IsOpen = true;
             infoBar.Severity = severity;

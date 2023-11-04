@@ -85,7 +85,6 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
 	{
 		if (e.Parameter != null && e.Parameter is SystemState sys)
 		{
-			// ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
 			Debug.WriteLine($"You sent '{sys.Title}'");
 			PostMessageEvent?.Invoke(this, new Message
 			{
@@ -178,7 +177,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                 Debug.WriteLine($"🡆 1st task has '{ts.Status}'");
                 // We should be on the main thread since we're specifying TaskScheduler.FromCurrentSynchronizationContext,
                 // but just in case we'll use the DispatcherQueue.TryEnqueue() callback here.
-                rootGrid.DispatcherQueue.TryEnqueue(() => { Status = $"1st search {ts.Status}"; });
+                rootGrid.DispatcherQueue?.TryEnqueue(() => { Status = $"1st search {ts.Status}"; });
             }, TaskScheduler.FromCurrentSynchronizationContext());
             #endregion
 
@@ -259,7 +258,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                 Debug.WriteLine($"🡆 2nd task has '{ts.Status}'");
                 // We should be on the main thread since we're specifying TaskScheduler.FromCurrentSynchronizationContext,
                 // but just in case we'll use the DispatcherQueue.TryEnqueue() callback here.
-                rootGrid.DispatcherQueue.TryEnqueue(() => { Status = $"2nd search {ts.Status}"; });
+                rootGrid.DispatcherQueue?.TryEnqueue(() => { Status = $"2nd search {ts.Status}"; });
             }, TaskScheduler.FromCurrentSynchronizationContext());
             #endregion
 
@@ -274,13 +273,13 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                 {
                     if (Items.Count == 0)
                     {
-                        rootGrid.DispatcherQueue.TryEnqueue(() => { Items.Add(bt); });
+                        rootGrid.DispatcherQueue?.TryEnqueue(() => { Items.Add(bt); });
                     }
                     else
                     {
                         var exists = Items.Select(b => b.Id).Where(b => b == bt.Id).Any();
                         if (!exists)
-                            rootGrid.DispatcherQueue.TryEnqueue(() => { Items.Add(bt); });
+                            rootGrid.DispatcherQueue?.TryEnqueue(() => { Items.Add(bt); });
                     }
                 }
 
@@ -289,22 +288,22 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                 {
                     if (Items.Count == 0)
                     {
-                        rootGrid.DispatcherQueue.TryEnqueue(() => { Items.Add(bt); });
+                        rootGrid.DispatcherQueue?.TryEnqueue(() => { Items.Add(bt); });
                     }
                     else
                     {
                         var exists = Items.Select(b => b.Id).Where(b => b == bt.Id).Any();
                         if (!exists)
-                            rootGrid.DispatcherQueue.TryEnqueue(() => { Items.Add(bt); });
+                            rootGrid.DispatcherQueue?.TryEnqueue(() => { Items.Add(bt); });
                     }
                 }
 
                 // Final check so we can show the user something.
                 if (collection.Count == 0)
                 {
-                    // If you want to see what your base hardware is for wireless communication then run this script in PowerShell…
+                    // To see what your base hardware is for wireless communication then run this script in PowerShell…
                     // PS> Get-ChildItem HKLM:\SYSTEM\CurrentControlSet\Enum\SWD\RADIO | foreach-object { $_ | Get-ItemProperty | Select-Object FriendlyName, LocationInformation }
-                    rootGrid.DispatcherQueue.TryEnqueue(() =>
+                    rootGrid.DispatcherQueue?.TryEnqueue(() =>
                     {
                         Items.Add(new BTDevice
                         {
@@ -328,13 +327,13 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
                 {
                     if (Items.Count == 0)
                     {
-                        rootGrid.DispatcherQueue.TryEnqueue(() => { Items.Add(bt); });
+                        rootGrid.DispatcherQueue?.TryEnqueue(() => { Items.Add(bt); });
                     }
                     else
                     {
                         var exists = Items.Select(b => b.Id).Where(b => b == bt.Id).Any();
                         if (!exists)
-                            rootGrid.DispatcherQueue.TryEnqueue(() => { Items.Add(bt); });
+                            rootGrid.DispatcherQueue?.TryEnqueue(() => { Items.Add(bt); });
                     }
                 }
             }

@@ -17,6 +17,7 @@ using System.Reflection;
 using System.Data;
 using System.Threading.Tasks;
 using Windows.System;
+using System.Threading;
 
 namespace SimpleNavigation;
 
@@ -44,7 +45,6 @@ public sealed partial class HomePage : Page
     {
         if (e.Parameter != null && e.Parameter is SystemState sys)
         {
-            // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
             Debug.WriteLine($"You sent '{sys.Title}'");
             landing.Text = $"I'm on page {sys.Title}";
             PostMessageEvent?.Invoke(this, new Message
@@ -67,6 +67,9 @@ public sealed partial class HomePage : Page
         if (btn != null)
         {
             await Launcher.LaunchUriAsync(new Uri($"https://learn.microsoft.com/en-us/search/?terms={btn}"));
+            //await Extensions.RunFileUsingProtocolHandlerAsync(new Uri($"https://learn.microsoft.com/en-us/search/?terms={btn}");
+            //Extensions.RunFileUsingProtocolHandler($"{Directory.GetCurrentDirectory()}\\Config.json");
         }
+
     }
 }

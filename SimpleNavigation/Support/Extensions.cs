@@ -32,6 +32,32 @@ namespace SimpleNavigation
     public static class Extensions
     {
         /// <summary>
+        /// Expects an object that inherits from <see cref="FrameworkElement"/>.
+        /// </summary>
+        /// <returns><see cref="Windows.Foundation.Point"/></returns>
+        public static Windows.Foundation.Point GetElementLocation(this object obj)
+        {
+            try
+            {
+                var element = (FrameworkElement)obj;
+                
+                if (element == null)
+                    return new Windows.Foundation.Point(200, 200);
+
+                Microsoft.UI.Xaml.Media.GeneralTransform buttonTransform = element.TransformToVisual(null);
+                Windows.Foundation.Point desiredLocation = buttonTransform.TransformPoint(new Windows.Foundation.Point());
+                desiredLocation.Y = desiredLocation.Y + element.ActualHeight;
+
+                return desiredLocation;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"{MethodBase.GetCurrentMethod()?.Name}: {ex.Message}");
+                return new Windows.Foundation.Point(200, 200);
+            }
+        }
+
+        /// <summary>
         /// InfoBadgeControl.Icon = (IconElement)new FontIcon() { Glyph = IntToUTF16(0xE701) };
         /// </summary>
         public static IconElement GetIcon(string imagePath)
@@ -115,6 +141,32 @@ namespace SimpleNavigation
                 return default;
 
             return (TEnum)parsed;
+        }
+
+        public static string GenerateTimestamp(string delimiter = "")
+        {
+            StringBuilder str = new StringBuilder();
+            if (string.IsNullOrEmpty(delimiter))
+            {
+                str.Append(DateTime.Now.Month)
+                   .Append(DateTime.Now.Day)
+                   .Append(DateTime.Now.Year)
+                   .Append(DateTime.Now.Hour)
+                   .Append(DateTime.Now.Minute)
+                   .Append(DateTime.Now.Second)
+                   .Append(DateTime.Now.Millisecond);
+            }
+            else
+            {
+                str.Append(DateTime.Now.Month).Append(delimiter)
+                   .Append(DateTime.Now.Day).Append(delimiter)
+                   .Append(DateTime.Now.Year).Append(delimiter)
+                   .Append(DateTime.Now.Hour).Append(delimiter)
+                   .Append(DateTime.Now.Minute).Append(delimiter)
+                   .Append(DateTime.Now.Second).Append(delimiter)
+                   .Append(DateTime.Now.Millisecond);
+            }
+            return $"{str}";
         }
 
         /// <summary>
@@ -213,7 +265,7 @@ namespace SimpleNavigation
         /// </summary>
         /// <param name="obj"></param>
         /// <returns>type name then base type for the object</returns>
-        public static string NameOf(this object obj) => $"{obj.GetType().Name} => {obj.GetType().BaseType?.Name}";
+        public static string NameOf(this object obj) => $"{obj.GetType().Name} ⇒ {obj.GetType().BaseType?.Name}";
 
         /// <summary>
         /// var vm = frame.GetPageViewModel();
@@ -253,62 +305,6 @@ namespace SimpleNavigation
         }
 
         #region [UI Helpers]
-        public static IEnumerable<T> GetDescendantsOfType<T>(this DependencyObject start) where T : DependencyObject
-        {
-            return start.GetDescendants().OfType<T>();
-        }
-
-        public static IEnumerable<DependencyObject> GetDescendants(this DependencyObject start)
-        {
-            var queue = new Queue<DependencyObject>();
-            var parentCount = VisualTreeHelper.GetChildrenCount(start);
-            for (int i = 0; i < parentCount; i++)
-            {
-                var child = VisualTreeHelper.GetChild(start, i);
-                yield return child;
-                queue.Enqueue(child);
-            }
-
-            while (queue.Count > 0)
-            {
-                var parent = queue.Dequeue();
-                var childCount = VisualTreeHelper.GetChildrenCount(parent);
-                for (int i = 0; i < childCount; i++)
-                {
-                    var child = VisualTreeHelper.GetChild(parent, i);
-                    yield return child;
-                    queue.Enqueue(child);
-                }
-            }
-        }
-
-        public static UIElement? FindElementByName(this UIElement element, string name)
-        {
-            if (element.XamlRoot != null && element.XamlRoot.Content != null)
-            {
-                var ele = (element.XamlRoot.Content as FrameworkElement)?.FindName(name);
-                if (ele != null)
-                    return ele as UIElement;
-            }
-            return null;
-        }
-
-        public static IEnumerable<Type> GetHierarchyFromUIElement(this Type element)
-        {
-            if (element.GetTypeInfo().IsSubclassOf(typeof(UIElement)) != true)
-            {
-                yield break;
-            }
-
-            Type current = element;
-
-            while (current != null && current != typeof(UIElement))
-            {
-                yield return current;
-                current = current.GetTypeInfo().BaseType;
-            }
-        }
-
         public static void DisplayRoutedEventsForUIElement()
         {
             Type uiElementType = typeof(UIElement);
@@ -1259,7 +1255,7 @@ namespace SimpleNavigation
         /// </summary>
         /// <param name="jsonString">JSON formatted text</param>
         /// <returns><see cref="List{T}"/> of each key</returns>
-        public static List<string> ExtractKeys(string jsonString)
+        public static List<string> ExtractKeys(this string jsonString)
         {
             var keys = new List<string>();
             var matches = Regex.Matches(jsonString, "[,\\{]\"(.*?)\"\\s*:");
@@ -1275,7 +1271,7 @@ namespace SimpleNavigation
         /// </summary>
         /// <param name="jsonString">JSON formatted text</param>
         /// <returns><see cref="List{T}"/> of each value</returns>
-        public static List<string> ExtractValues(string jsonString)
+        public static List<string> ExtractValues(this string jsonString)
         {
             var values = new List<string>();
             var matches = Regex.Matches(jsonString, ":\\s*(.*?)(,|}|\\])");
@@ -1283,6 +1279,11 @@ namespace SimpleNavigation
             return values;
         }
 
+        /// <summary>
+        /// Assumes that images are stored under "Assets" folder.
+        /// </summary>
+        /// <param name="assetName">the image file name</param>
+        /// <returns><see cref="BitmapImage"/></returns>
         public static BitmapImage? GetImageFromAssets(this string assetName)
         {
             BitmapImage? img = null;
@@ -1316,13 +1317,13 @@ namespace SimpleNavigation
 
         public static Microsoft.UI.Composition.ImplicitAnimationCollection CreateImplicitAnimation(this Microsoft.UI.Composition.ImplicitAnimationCollection source, string Target, TimeSpan? Duration = null)
         {
-            Microsoft.UI.Composition.KeyFrameAnimation animation = null;
+            Microsoft.UI.Composition.KeyFrameAnimation? animation = null;
             switch (Target.ToLower())
             {
                 case "offset":
                 case "scale":
-                case "centerPoint":
-                case "rotationAxis":
+                case "centerpoint":
+                case "rotationaxis":
                     animation = source.Compositor.CreateVector3KeyFrameAnimation();
                     break;
 
@@ -1331,9 +1332,9 @@ namespace SimpleNavigation
                     break;
 
                 case "opacity":
-                case "blueRadius":
-                case "rotationAngle":
-                case "rotationAngleInDegrees":
+                case "blueradius":
+                case "rotationangle":
+                case "rotationangleindegrees":
                     animation = source.Compositor.CreateScalarKeyFrameAnimation();
                     break;
 
@@ -1342,8 +1343,12 @@ namespace SimpleNavigation
                     break;
             }
 
-            if (animation == null) throw new ArgumentNullException("Unknown Target");
-            if (!Duration.HasValue) Duration = TimeSpan.FromSeconds(0.2d);
+            if (animation is null)
+                throw new ArgumentNullException("Unknown Target");
+            
+            if (Duration is null) 
+                Duration = TimeSpan.FromSeconds(0.2d); // 200 milliseconds
+
             animation.InsertExpressionKeyFrame(1f, "this.FinalValue");
             animation.Duration = Duration.Value;
             animation.Target = Target;
@@ -1353,7 +1358,7 @@ namespace SimpleNavigation
         }
 
         /// <summary>
-        /// Dictionary<char, int> charCount = GetCharacterCount("some input text string here");
+        /// Dictionary{char, int} charCount = GetCharacterCount("some input text string here");
         /// foreach (var kvp in charCount) { Debug.WriteLine($"Character: {kvp.Key}, Count: {kvp.Value}"); }
         /// </summary>
         /// <param name="input">the text string to analyze</param>
@@ -1367,6 +1372,7 @@ namespace SimpleNavigation
 
             foreach (var ch in input)
             {
+                // We'll use the key (character) to update the count.
                 if (charCount.ContainsKey(ch))
                     charCount[ch]++;
                 else
@@ -1493,6 +1499,11 @@ namespace SimpleNavigation
             return (size / Math.Pow(1024, 6)).ToString("F0") + "EB";
         }
 
+        /// <summary>
+        /// Determine if a file/folder path exceed the maximum allowed.
+        /// </summary>
+        /// <param name="path">full path</param>
+        /// <returns>true if too long, false otherwise</returns>
         public static bool IsPathTooLong(string path)
         {
             try
@@ -1505,6 +1516,12 @@ namespace SimpleNavigation
             catch (PathTooLongException) { return true; }
         }
 
+        /// <summary>
+        /// Determines if a path is not a <see cref="System.IO.FileAttributes.ReparsePoint"/>
+        /// and <see cref="IsReadable(string)"/>.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>true if valid, false otherwise</returns>
         static bool IsValidPath(string path)
         {
             if ((File.GetAttributes(path) & System.IO.FileAttributes.ReparsePoint) == System.IO.FileAttributes.ReparsePoint)
@@ -1520,11 +1537,17 @@ namespace SimpleNavigation
             return true;
         }
 
+        /// <summary>
+        /// Attempts to get the directory name and the directories inside the given path.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>true if readable, false otherwise</returns>
         static bool IsReadable(string path)
         {
             try
             {
                 var dn = Path.GetDirectoryName(path);
+                if (string.IsNullOrEmpty(dn)) { return false; }
                 string[] test = Directory.GetDirectories(dn, "*.*", SearchOption.TopDirectoryOnly);
             }
             catch (UnauthorizedAccessException) { return false; }
@@ -1543,7 +1566,7 @@ namespace SimpleNavigation
             DriveInfo[] drives = DriveInfo.GetDrives();
             foreach (DriveInfo drive in drives)
             {
-                if (drive.DriveType == DriveType.Fixed && drive.IsReady && drive.AvailableFreeSpace > 1000000)
+                if (drive.DriveType == DriveType.Fixed && drive.IsReady)
                 {
                     if (drive.Name[0] > lastLetter)
                         lastLetter = drive.Name[0];
@@ -1719,6 +1742,7 @@ namespace SimpleNavigation
 
         /// <summary>
         /// Reads all lines in the <see cref="Stream" />.
+        /// Will work with any object that returns a <see cref="FileStream"/>.
         /// </summary>
         /// <param name="stream">The <see cref="Stream" /> to read from.</param>
         /// <returns>All lines in the stream.</returns>
@@ -1726,6 +1750,7 @@ namespace SimpleNavigation
 
         /// <summary>
         /// Reads all lines in the <see cref="Stream" />.
+        /// Will work with any object that returns a <see cref="FileStream"/>.
         /// </summary>
         /// <param name="stream">The <see cref="Stream" /> to read from.</param>
         /// <param name="encoding">The character encoding to use.</param>
@@ -1739,7 +1764,31 @@ namespace SimpleNavigation
         }
 
         /// <summary>
+        /// Reads all lines in the <see cref="Stream" />.
+        /// Will work with any object that returns a <see cref="FileStream"/>.
+        /// </summary>
+        /// <param name="stream">The <see cref="Stream" /> to read from.</param>
+        /// <returns>All lines in the stream.</returns>
+        public static IEnumerable<string> ReadAllLinesEnumerable(this Stream stream) => ReadAllLinesEnumerable(stream, Encoding.UTF8);
+
+        /// <summary>
+        /// Reads all lines in the <see cref="Stream" />.
+        /// Will work with any object that returns a <see cref="FileStream"/>.
+        /// </summary>
+        /// <param name="stream">The <see cref="Stream" /> to read from.</param>
+        /// <param name="encoding">The character encoding to use.</param>
+        /// <returns>All lines in the stream.</returns>
+        public static IEnumerable<string> ReadAllLinesEnumerable(this Stream stream, Encoding encoding)
+        {
+            using (StreamReader reader = new StreamReader(stream, encoding))
+            {
+                return ReadAllLines(reader);
+            }
+        }
+
+        /// <summary>
         /// Reads all lines in the <see cref="TextReader" />.
+        /// Will work with any object that returns a <see cref="StreamReader"/>.
         /// </summary>
         /// <param name="reader">The <see cref="TextReader" /> to read from.</param>
         /// <returns>All lines in the stream.</returns>
@@ -1754,6 +1803,7 @@ namespace SimpleNavigation
 
         /// <summary>
         /// Reads all lines in the <see cref="TextReader" />.
+        /// Will work with any object that returns a <see cref="StreamReader"/>.
         /// </summary>
         /// <param name="reader">The <see cref="TextReader" /> to read from.</param>
         /// <returns>All lines in the stream.</returns>
@@ -1778,6 +1828,94 @@ namespace SimpleNavigation
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Writes all <paramref name="lines"/> using a <see cref="TextWriter"/>.
+        /// Will work with any object that returns a <see cref="StreamWriter"/>.
+        /// </summary>
+        /// <param name="writer"><see cref="TextWriter"/></param>
+        /// <param name="lines"><see cref="List{T}"/></param>
+        public static async Task WriteAllLines(this TextWriter writer, List<string> lines)
+        {
+            foreach (var line in lines)
+            {
+                await writer.WriteLineAsync(line).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Writes all <paramref name="data"/> using a <see cref="TextWriter"/>.
+        /// Will work with any object that returns a <see cref="StreamWriter"/>.
+        /// </summary>
+        /// <param name="data"><see cref="char"/> array</param>   
+        /// <param name="writer"><see cref="TextWriter"/></param>
+        public static async Task WriteAllData(this TextWriter writer, char[] data)
+        {
+            if (data.Length > 0)
+                await writer.WriteAsync(data, 0, data.Length).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Writes all <paramref name="data"/> using a <see cref="TextWriter"/>.
+        /// Will work with any object that returns a <see cref="StreamWriter"/>.
+        /// </summary>
+        /// <param name="data"><see cref="string"/> array</param>   
+        /// <param name="writer"><see cref="TextWriter"/></param>
+        public static async Task WriteAllData(this TextWriter writer, string[] data)
+        {
+            if (data.Length > 0)
+            {
+                List<char> charList = new List<char>();
+                foreach (string str in data)
+                {
+                    charList.AddRange(str.ToCharArray());
+                }
+                char[] converted = charList.ToArray();
+                await writer.WriteAsync(converted, 0, converted.Length).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// StreamReader sr = File.OpenText(testFile);
+        /// IEnumerable{string} lines = sr.ReadAllLines().CatchExceptions((ex) => { $"⇒ {ex.Message}".Print(); });
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="action">action to run if exception occurs</param>
+        /// <returns><see cref="IEnumerable{T}"/></returns>
+        /// <remarks>
+        /// This solution only catches exceptions raised when processing the originally yielded or projected 
+        /// value, so it is a great way to handle exceptions raised when you have chained IEnumerable expressions 
+        /// as OP has requested. If the exception is raised in the IEnumerable provider then there is a high chance 
+        /// the enumeration will be aborted, this method will handle the exception gracefully but there will be no 
+        /// way to resume the enumeration.
+        /// </remarks>
+        public static IEnumerable<T> CatchExceptions<T>(this IEnumerable<T>? source, Action<Exception>? action = null)
+        {
+            if (source is null)
+                yield return (T)Enumerable.Empty<T>();
+
+            using (var enumerator = source?.GetEnumerator())
+            {
+                bool? next = true;
+
+                while (next.HasValue && next.Value)
+                {
+                    try
+                    {
+                        next = enumerator?.MoveNext();
+                    }
+                    catch (Exception ex)
+                    {
+                        if (action != null)
+                            action(ex);
+                        continue;
+                    }
+
+                    if (next.HasValue && next.Value && enumerator is not null)
+                        yield return enumerator.Current;
+                }
+            }
         }
 
         /// <summary>
@@ -1853,26 +1991,26 @@ namespace SimpleNavigation
         }
 
         /// <summary>
-        /// Provides the distance in a <see cref="Point"/> from the passed in element to the element being called on.
+        /// Provides the distance in a <see cref="Windows.Foundation.Point"/> from the passed in element to the element being called on.
         /// For instance, calling child.CoordinatesFrom(container) will return the position of the child within the container.
         /// Helper for <see cref="UIElement.TransformToVisual(UIElement)"/>.
         /// </summary>
         /// <param name="target">Element to measure distance.</param>
         /// <param name="parent">Starting parent element to provide coordinates from.</param>
-        /// <returns><see cref="Point"/> containing difference in position of elements.</returns>
+        /// <returns><see cref="Windows.Foundation.Point"/> containing difference in position of elements.</returns>
         public static Windows.Foundation.Point CoordinatesFrom(this UIElement target, UIElement parent)
         {
             return target.TransformToVisual(parent).TransformPoint(default(Windows.Foundation.Point));
         }
 
         /// <summary>
-        /// Provides the distance in a <see cref="Point"/> to the passed in element from the element being called on.
+        /// Provides the distance in a <see cref="Windows.Foundation.Point"/> to the passed in element from the element being called on.
         /// For instance, calling container.CoordinatesTo(child) will return the position of the child within the container.
         /// Helper for <see cref="UIElement.TransformToVisual(UIElement)"/>.
         /// </summary>
         /// <param name="parent">Starting parent element to provide coordinates from.</param>
         /// <param name="target">Element to measure distance to.</param>
-        /// <returns><see cref="Point"/> containing difference in position of elements.</returns>
+        /// <returns><see cref="Windows.Foundation.Point"/> containing difference in position of elements.</returns>
         public static Windows.Foundation.Point CoordinatesTo(this UIElement parent, UIElement target)
         {
             return target.TransformToVisual(parent).TransformPoint(default(Windows.Foundation.Point));
@@ -2038,9 +2176,9 @@ namespace SimpleNavigation
 
             // lerp the colors to get the difference
             byte a = (byte)Math.Max(0, Math.Min(255, sa.Lerp(ea, amount))),
-                r = (byte)Math.Max(0, Math.Min(255, sr.Lerp(er, amount))),
-                g = (byte)Math.Max(0, Math.Min(255, sg.Lerp(eg, amount))),
-                b = (byte)Math.Max(0, Math.Min(255, sb.Lerp(eb, amount)));
+                 r = (byte)Math.Max(0, Math.Min(255, sr.Lerp(er, amount))),
+                 g = (byte)Math.Max(0, Math.Min(255, sg.Lerp(eg, amount))),
+                 b = (byte)Math.Max(0, Math.Min(255, sb.Lerp(eb, amount)));
 
             // return the new color
             return Windows.UI.Color.FromArgb(a, r, g, b);
@@ -2108,6 +2246,9 @@ namespace SimpleNavigation
             if (source.G == 0) { source.G = 2; }
             if (source.B == 0) { source.B = 2; }
 
+            if (factor < 0.001F)
+                factor = 0.1F;
+
             var red = (int)((float)source.R / factor);
             var green = (int)((float)source.G / factor);
             var blue = (int)((float)source.B / factor);
@@ -2126,11 +2267,11 @@ namespace SimpleNavigation
         }
 
         /// <summary>
-        /// Creates a <see cref="Color"/> from a XAML color string.
+        /// Creates a <see cref="Windows.UI.Color"/> from a XAML color string.
         /// Any format used in XAML should work.
         /// </summary>
         /// <param name="colorString">The XAML color string.</param>
-        /// <returns>The created <see cref="Color"/>.</returns>
+        /// <returns>The created <see cref="Windows.UI.Color"/>.</returns>
         public static Windows.UI.Color? ToColor(this string colorString)
         {
             if (string.IsNullOrEmpty(colorString))
@@ -2584,5 +2725,197 @@ namespace SimpleNavigation
                 catch (Exception ex) { Debug.WriteLine($"RunFileUsingProtocolHandler: {ex.Message}"); }
             });
         }
+
+        #region [Task Helpers]
+        /// <summary>
+        /// Task.Factory.StartNew (() => { throw null; }).IgnoreExceptions();
+        /// </summary>
+        public static void IgnoreExceptions(this Task task, bool logEx = false)
+        {
+            task.ContinueWith(t =>
+            {
+                AggregateException? ignore = t.Exception;
+
+                ignore?.Flatten().Handle(ex =>
+                {
+                    if (logEx)
+                        Debug.WriteLine($"Exception type: {ex.GetType()}\r\nException Message: {ex.Message}");
+                    return true; // don't re-throw
+                });
+
+            }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        /// <summary>
+        /// Not sure if you would ever want this?
+        /// </summary>
+        public static Task<TResult?> IgnoreExceptions<TResult>(this Task<TResult> task, bool logEx = false)
+        {
+            var tmp = task.ContinueWith(t =>
+            {
+                AggregateException? ignore = t.Exception;
+                ignore?.Flatten().Handle(ex =>
+                {
+                    if (logEx)
+                        Debug.WriteLine($"Exception type: {ex.GetType()}\r\nException Message: {ex.Message}");
+                    return true; // don't re-throw
+                });
+                return t.Result ?? default; // if we faulted then this will be an issue since there may not be a result to give
+            }, TaskContinuationOptions.OnlyOnFaulted);
+
+            return tmp;
+        }
+
+        /// <summary>
+        /// Chainable task helper.
+        /// var result = await SomeLongAsyncFunction().WithTimeout(TimeSpan.FromSeconds(2));
+        /// </summary>
+        /// <typeparam name="TResult">the type of task result</typeparam>
+        /// <returns><see cref="Task"/>TResult</returns>
+        public async static Task<TResult> WithTimeout<TResult>(this Task<TResult> task, TimeSpan timeout)
+        {
+            Task winner = await (Task.WhenAny(task, Task.Delay(timeout)));
+
+            if (winner != task)
+                throw new TimeoutException();
+
+            return await task;   // Unwrap result/re-throw
+        }
+
+        /// <summary>
+        /// Task extension to add a timeout.
+        /// </summary>
+        /// <returns>The task with timeout.</returns>
+        /// <param name="task">Task.</param>
+        /// <param name="timeoutInMilliseconds">Timeout duration in Milliseconds.</param>
+        /// <typeparam name="T">The 1st type parameter.</typeparam>
+        public async static Task<T> WithTimeout<T>(this Task<T> task, int timeoutInMilliseconds)
+        {
+            var retTask = await Task.WhenAny(task, Task.Delay(timeoutInMilliseconds)).ConfigureAwait(false);
+
+            #pragma warning disable CS8603 // Possible null reference return.
+            return retTask is Task<T> ? task.Result : default;
+            #pragma warning restore CS8603 // Possible null reference return.
+        }
+
+        /// <summary>
+        /// Chainable task helper.
+        /// var result = await SomeLongAsyncFunction().WithCancellation(cts.Token);
+        /// </summary>
+        /// <typeparam name="TResult">the type of task result</typeparam>
+        /// <returns><see cref="Task"/>TResult</returns>
+        public static Task<TResult> WithCancellation<TResult>(this Task<TResult> task, CancellationToken cancelToken)
+        {
+            TaskCompletionSource<TResult> tcs = new TaskCompletionSource<TResult>();
+            CancellationTokenRegistration reg = cancelToken.Register(() => tcs.TrySetCanceled());
+            task.ContinueWith(ant =>
+            {
+                reg.Dispose(); // NOTE: it's important to dispose of CancellationTokenRegistrations or they will hand around in memory until the application closes
+                if (ant.IsCanceled)
+                    tcs.TrySetCanceled();
+                else if (ant.IsFaulted)
+                    tcs.TrySetException(ant.Exception?.InnerException ?? ant.Exception ?? new Exception("No exception information available."));
+                else
+                    tcs.TrySetResult(ant.Result);
+            });
+            return tcs.Task;  // Return the TaskCompletionSource result
+        }
+
+        public static Task<T> WithAllExceptions<T>(this Task<T> task)
+        {
+            TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
+
+            task.ContinueWith(ignored =>
+            {
+                switch (task.Status)
+                {
+                    case TaskStatus.Canceled:
+                        Debug.WriteLine($"[TaskStatus.Canceled]");
+                        tcs.SetCanceled();
+                        break;
+                    case TaskStatus.RanToCompletion:
+                        tcs.SetResult(task.Result);
+                        //Console.WriteLine($"[TaskStatus.RanToCompletion({task.Result})]");
+                        break;
+                    case TaskStatus.Faulted:
+                        // SetException will automatically wrap the original AggregateException
+                        // in another one. The new wrapper will be removed in TaskAwaiter, leaving
+                        // the original intact.
+                        Debug.WriteLine($"[TaskStatus.Faulted]: {task.Exception?.Message}");
+                        tcs.SetException(task.Exception ?? new Exception("No exception information available."));
+                        break;
+                    default:
+                        Debug.WriteLine($"[TaskStatus: Continuation called illegally.]");
+                        tcs.SetException(new InvalidOperationException("Continuation called illegally."));
+                        break;
+                }
+            });
+
+            return tcs.Task;
+        }
+
+        /// <summary>
+        /// This should not be used in the real world.
+        /// </summary>
+        public static Task<T> SwallowExceptions<T>(this Task<T> task, bool verbose = false)
+        {
+            TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
+
+            task.ContinueWith(ignored =>
+            {
+                switch (task.Status)
+                {
+                    case TaskStatus.Canceled:
+                        if (verbose)
+                            Debug.WriteLine($"[TaskStatus.Canceled]");
+                        tcs.SetCanceled();
+                        break;
+                    case TaskStatus.RanToCompletion:
+                        tcs.SetResult(task.Result);
+                        if (verbose)
+                            Debug.WriteLine($"[TaskStatus.RanToCompletion]: {task.Result}");
+                        break;
+                    case TaskStatus.Faulted:
+                        if (verbose)
+                            Debug.WriteLine($"[TaskStatus.Faulted]: {task.Exception?.Message}");
+                        // NOTE: We don't have a result since the task faulted, but we can still set a result based on the
+                        // default of the type; this is dangerous and doesn't make much sense, it's just for experimentation.
+                        tcs.SetResult(default(T));
+                        break;
+                    default:
+                        if (verbose)
+                            Debug.WriteLine($"[Continuation called illegally]");
+                        tcs.SetException(new InvalidOperationException("Continuation called illegally."));
+                        break;
+                }
+            });
+
+            return tcs.Task;
+        }
+
+        #pragma warning disable RECS0165 // Asynchronous methods should return a Task instead of void
+        /// <summary>
+        /// Attempts to await on the task and catches exception
+        /// </summary>
+        /// <param name="task">Task to execute</param>
+        /// <param name="onException">What to do when method has an exception</param>
+        /// <param name="continueOnCapturedContext">If the context should be captured.</param>
+        public static async void SafeFireAndForget(this Task task, Action<Exception>? onException = null, bool continueOnCapturedContext = false)
+        #pragma warning restore RECS0165 // Asynchronous methods should return a Task instead of void
+        {
+            try
+            {
+                await task.ConfigureAwait(continueOnCapturedContext);
+            }
+            catch (Exception ex) when (onException != null)
+            {
+                onException.Invoke(ex);
+            }
+            catch (Exception ex) when (onException == null)
+            {
+                Debug.WriteLine($"SafeFireAndForget: {ex.Message}");
+            }
+        }
+        #endregion
     }
 }

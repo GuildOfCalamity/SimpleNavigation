@@ -406,7 +406,30 @@ public sealed partial class LaunchPage : Page, INotifyPropertyChanged
 
         // Calculate the position for the Open With dialog.
         // An alternative to using the point is to set the rect of the UI element that triggered the launch.
-        Point openWithPosition = MainWindow.GetElementLocation(sender);
+        Point openWithPosition = sender.GetElementLocation();
+        Debug.WriteLine($"⇒ FrameworkElement was determined to be at {openWithPosition}");
+
+        // We can find other locations and sizes using the GetAncestors() helper.
+        Point alternateOpenWithPosition = new();
+        var btn = sender as Button;
+        var ants = btn?.GetAncestors();
+        foreach (var dobj in ants)
+        {
+            Debug.WriteLine(dobj.NameOf());
+            // The page will most likely have the largest size.
+            if (dobj.GetType().BaseType == typeof(Page))
+            {
+                var page = (Page)dobj;
+                // Use ActualSize, the Width and Height properties may return NaN.
+                var size = page.ActualSize;
+                Debug.WriteLine($"⇒ {size.X},{size.Y}");
+                alternateOpenWithPosition = new Point
+                { 
+                    X = size.X / 2, 
+                    Y = size.Y / 2,
+                };
+            }
+        }
         
         // Next, configure the Open With dialog.
         var options = new LauncherOptions();

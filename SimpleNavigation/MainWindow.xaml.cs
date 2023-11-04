@@ -19,7 +19,11 @@ using WinRT;
 namespace SimpleNavigation
 {
     /// <summary>
-    /// An empty window that can be used on its own or navigated to within a Frame.
+    /// ⇦ ⇨ ⇧ ⇩ 🡐 🡒 🡑 🡓 🡄 🡆 🡅 🡇
+    /// 👈 👉 👆 👇 💾 ✉ 🖂 🖃 📜 📄 🗟
+    /// 🗊 🗠 🗎 📁 💼 📦 🔔 ⚠ ⛔ 🛑 ℹ ♻
+    /// ☢ ⚡ ♨ ☠ 🚧 🚨 ✋ 📢 📡 🚩
+    /// http://xahlee.info/comp/unicode_arrows.html
     /// </summary>
     public sealed partial class MainWindow : Window
     {
@@ -32,7 +36,7 @@ namespace SimpleNavigation
         public MainWindow()
         {
             this.InitializeComponent();
-			this.ExtendsContentIntoTitleBar = true;
+            this.ExtendsContentIntoTitleBar = true;
             this.SetTitleBar(AppTitleBar);
             this.Title = AssemblyHelper.GetAssemblyName();
             ((FrameworkElement)this.Content).ActualThemeChanged += Window_ThemeChanged;
@@ -119,23 +123,6 @@ namespace SimpleNavigation
                     break;
             }
             #endregion
-        }
-
-        public static Point GetElementLocation(object obj)
-        {
-            try
-            {
-                var element = (FrameworkElement)obj;
-                Microsoft.UI.Xaml.Media.GeneralTransform buttonTransform = element.TransformToVisual(null);
-                Point desiredLocation = buttonTransform.TransformPoint(new Point());
-                desiredLocation.Y = desiredLocation.Y + element.ActualHeight;
-                return desiredLocation;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"GetElementLocation: {ex.Message}");
-                return new Point(100, 100);
-            }
         }
     }
 }
