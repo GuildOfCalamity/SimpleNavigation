@@ -74,7 +74,6 @@ namespace SimpleNavigation
         {
             if (e.Parameter != null && e.Parameter is SystemState sys)
             {
-                // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
                 Debug.WriteLine($"You sent '{sys.Title}'");
                 landing.Text = $"I'm on page {sys.Title}";
                 PostMessageEvent?.Invoke(this, new Message
@@ -202,7 +201,7 @@ namespace SimpleNavigation
             filter = args.QueryText;
 
             // Our PackageDetail type does not inherit from ObservableObject, so we'll need to trigger a ItemsView refresh.
-            ivItems.DispatcherQueue.TryEnqueue(() =>
+            ivItems.DispatcherQueue?.TryEnqueue(() =>
             {
                 ivItems.ItemsSource = null;
                 ivItems.ItemsSource = Items;

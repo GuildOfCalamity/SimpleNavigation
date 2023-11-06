@@ -14,7 +14,7 @@ public class ObservableCollectionEx<T> : ObservableCollection<T>
 {
     public void AddRange(IEnumerable<T> collection)
     {
-        CheckReentrancy();
+        CheckReentrancy(); // from the System.Collections.ObjectModel.ObservableCollection class
 
         // Is there anything to add?
         if (collection.Any() is false)
@@ -23,8 +23,7 @@ public class ObservableCollectionEx<T> : ObservableCollection<T>
         List<T> itemsList = (List<T>)Items;
         itemsList.AddRange(collection);
 
-        OnCollectionChanged(
-            new NotifyCollectionChangedEventArgs(
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(
                 action: NotifyCollectionChangedAction.Add,
                 changedItems: itemsList,
                 startingIndex: itemsList.Count - 1));
@@ -32,7 +31,7 @@ public class ObservableCollectionEx<T> : ObservableCollection<T>
 
     public void AddRange(IList<T> collection)
     {
-        CheckReentrancy();
+        CheckReentrancy(); // from the System.Collections.ObjectModel.ObservableCollection class
 
         // Is there anything to add?
         if (collection.Any() is false)
@@ -41,8 +40,7 @@ public class ObservableCollectionEx<T> : ObservableCollection<T>
         List<T> itemsList = (List<T>)Items;
         itemsList.AddRange(collection);
 
-        OnCollectionChanged(
-            new NotifyCollectionChangedEventArgs(
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(
                 action: NotifyCollectionChangedAction.Add,
                 changedItems: itemsList,
                 startingIndex: itemsList.Count - 1));

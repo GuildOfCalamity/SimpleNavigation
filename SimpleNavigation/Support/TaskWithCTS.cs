@@ -19,6 +19,10 @@ Faulted 	                    One of the three final states.  A Task in this stat
 
 NOTE: Many of the states are transient, meaning that we’re dealing with a concurrent system, and by the time you’ve received the value of the status, the status may have changed.
 */
+
+/// <summary>
+/// A cancellable task class.
+/// </summary>
 public class TaskWithCTS
 {
     #region [Props]
@@ -46,7 +50,8 @@ public class TaskWithCTS
             _CancellationTokenSource = cts;
             _Interrupted = false;
             _Task = Task.Factory.StartNew(() =>
-            {   // NOTE: Task.Factory.StartNew doesn't understand asynchronous delegates.
+            {   
+                // NOTE: Task.Factory.StartNew doesn't understand asynchronous delegates.
                 // StartNew is an extremely low-level API that should not be used normally
                 // in production code. We should re-work this to use Task.Run instead.
                 _TID = Task.CurrentId;
@@ -55,10 +60,7 @@ public class TaskWithCTS
             _CancellationTokenSource.Token,
             TaskCreationOptions.LongRunning,
             SynchronizationContext.Current != null ? TaskScheduler.FromCurrentSynchronizationContext() : TaskScheduler.Current)
-            .ContinueWith(t =>
-            {
-                _Ended = DateTime.Now;
-            });
+            .ContinueWith(t => { _Ended = DateTime.Now; });
 
             if (_Task.Status != TaskStatus.WaitingForActivation)
                 Debug.WriteLine($">>> {_TID} may have an issue. <<<");

@@ -46,6 +46,7 @@ public sealed partial class NextPage : Page
             await CustomEventTesting();
             await Task.Delay(1600);
             TestCancellableTaskClass();
+            await MeasurePerformance();
         });
     }
 
@@ -285,7 +286,7 @@ public sealed partial class NextPage : Page
             //Task.Yield(); // fork the continuation into a separate work item
 
             // We need to copy the counter state since we'll be
-            // inside a lambda and not using foreach enumerator...
+            // inside a lambda and not using foreach enumerator.
             int idx = i; // <-- avoid the captured variable trap
 
             // We'll need to create the CTS outside of the Task object so that we
@@ -326,12 +327,12 @@ public sealed partial class NextPage : Page
 
             cancellableTasks.Add(task);
 
-            // Randomly pick a task to cancel...
+            // Randomly pick a task to cancel.
             if (targetID == null && Random.Shared.Next(1, 10) > 7)
                 targetID = task?._GID; // this will be the task we're going to cancel
         }
 
-        // Find our randomly selected task and call it's Cancel() method...
+        // Find our randomly selected task and call it's Cancel() method.
         TaskWithCTS? canTask = cancellableTasks.FirstOrDefault(x => x._GID == targetID);
         if (canTask != null)
         {
@@ -339,25 +340,26 @@ public sealed partial class NextPage : Page
             canTask.Cancel();
         }
 
+        // Are we adding the monitor thread?
         if (addMonitorThread)
         {
-            // Spin up another thread to watch the tasks so the current thread can resume...
+            // Spin up another thread to watch the tasks so the current thread can resume.
             ThreadPool.QueueUserWorkItem((object? o) =>
             {
-                // We'll wait here for all cancellable tasks to complete...
+                // We'll wait here for all cancellable tasks to complete.
                 while (cancellableTasks.Any(x => x.IsRunning() == true))
                     Thread.Sleep(50);
 
-                // We can check for any internal TaskWithCTS object exceptions...
+                // We can check for any internal TaskWithCTS object exceptions.
                 TaskWithCTS? exTask = cancellableTasks.FirstOrDefault(x => x._Error != null);
                 if (exTask != null)
                 {
                     InsertMessage($"{exTask._GID} error: {exTask._Error.Message}");
                 }
 
-                // We can get a listing of the cancellable tasks and when they ended...
+                // We can get a listing of the cancellable tasks and when they ended.
                 var finishedTasks = cancellableTasks.Select(x => x).Where(x => x._Ended.HasValue);
-                // Use our extension method to action through each one...
+                // Use our extension method to action through each one.
                 finishedTasks.ForEach(et =>
                 {
                     //TimeSpan? tsStart = et._Started?.TimeOfDay;
@@ -366,7 +368,7 @@ public sealed partial class NextPage : Page
                     InsertMessage($"[{et._GID?.ToString().Substring(0, 8)}] StartTime: {et._Started?.ToLongTimeString()}, FinishTime: {et._Ended?.ToLongTimeString()} ({diff.ToTimeString()})");
                 });
 
-                // We can check IsCanceled() on the tasks...
+                // We can check IsCanceled() on the tasks.
                 var isCanTasks = cancellableTasks.Select(x => x).Where(x => x.IsCanceled() == true);
                 InsertMessage($"Number of CTs with IsCanceled true: {isCanTasks.Count()}");
             });
@@ -388,6 +390,18 @@ public sealed partial class NextPage : Page
         await pm.StartProcessAsync();
         await Task.Delay(1000);
         await pm.StopProcessAsync();
+
+        /*
+            ⇒ IsRunning? True
+            ⇒ Success: Process started.
+            ⇒ Completion Time: 12:00:00 AM
+            ⇒ IsRunning? False
+            ⇒ Success: Process finished.
+            ⇒ Completion Time: 11:49:54 AM
+            ⇒ IsRunning? False
+            ⇒ Success: Process is already complete.
+            ⇒ Completion Time: 11:49:55 AM
+        */
     }
 
     void PM_ProcessStarted(object? sender, ProcessEventArgs e)
@@ -408,6 +422,38 @@ public sealed partial class NextPage : Page
         if (epm != null) { InsertMessage($"⇒ IsRunning? {epm.IsRunning}"); }
         InsertMessage($"{(e.Error == null ? "Success: " + e.Result : "Failed: " + e.Error.Message)}");
         InsertMessage($"Cancel Time: {e.CompletionTime.ToLongTimeString()}");
+    }
+    #endregion
+
+    #region [Task Timer Testing]
+    public async Task MeasurePerformance()
+    {
+        // Clocking a task that returns a value.
+        var results = await TaskTimer.Start(() =>
+        {
+            return TaskTimeTestWithReturnValue(DateTime.Now.Millisecond, Random.Shared.Next(500, 5000));
+        });
+        InsertMessage($"Task took {results.Duration.TotalSeconds} seconds for this return value: {results.Result}");
+
+        // Clocking a task that does not return a value.
+        var results2 = await TaskTimer.Start(() =>
+        {
+            return TaskTimeTestWithoutReturnValue(DateTime.Now.Millisecond, Random.Shared.Next(500, 5000));
+        });
+        InsertMessage($"Task took {results2.Duration.TotalSeconds} seconds (no return value)");
+    }
+
+    public async Task<int> TaskTimeTestWithReturnValue(int a, int b)
+    {
+        var total = a + b;
+        await Task.Delay(total);
+        return total;
+    }
+
+    public async Task TaskTimeTestWithoutReturnValue(int a, int b)
+    {
+        var total = a + b;
+        await Task.Delay(total);
     }
     #endregion
 }

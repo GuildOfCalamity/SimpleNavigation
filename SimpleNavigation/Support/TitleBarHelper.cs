@@ -10,7 +10,7 @@ using Windows.UI;
 namespace SimpleNavigation;
 
 // Helper class to workaround custom title bar bugs.
-// DISCLAIMER: The resource key names and color values used below are subject to change. Do not depend on them.
+// DISCLAIMER: The resource key names and color values used below may change in the future.
 // https://github.com/microsoft/TemplateStudio/issues/4516
 internal class TitleBarHelper
 {
