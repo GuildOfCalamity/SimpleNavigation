@@ -92,6 +92,10 @@
                                 Opacity="1"
                                 Color="#2070A1" />
                             <SolidColorBrush
+                                x:Key="TextForeground5"
+                                Opacity="1"
+                                Color="#4CE000" />
+                            <SolidColorBrush
                                 x:Key="BorderBrush1"
                                 Opacity="0.6"
                                 Color="#A0A0AF" />
@@ -127,6 +131,10 @@
                                 x:Key="BorderBrush1"
                                 Opacity="0.6"
                                 Color="#30303F" />
+                            <SolidColorBrush
+                                x:Key="TextForeground5"
+                                Opacity="1"
+                                Color="#1A5600" />
                             <media:AcrylicBrush
                                 x:Key="SampleAcrylicBrush"
                                 FallbackColor="#9a9baf"

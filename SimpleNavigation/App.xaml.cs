@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text;
 using System.Threading.Tasks;
 
 using Microsoft.UI.Windowing;
@@ -21,8 +24,10 @@ using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Management.Deployment;
 using Windows.UI.Popups;
 using Windows.UI.ViewManagement;
+using static SimpleNavigation.Win32API;
 
 namespace SimpleNavigation;
 
@@ -42,6 +47,8 @@ public partial class App : Application
     public static bool DebugMode { get; set; } = false;
     public static IntPtr WindowHandle { get; set; }
     public static FrameworkElement? MainRoot { get; set; }
+    public static uint ProcessorCount { get; set; }
+    public static string? Architecture { get; set; }
 #if IS_UNPACKAGED // We're using a custom PropertyGroup Condition we defined in the csproj to help us with the decision.
     public static bool IsPackaged { get => false; }
 #else
@@ -75,6 +82,23 @@ public partial class App : Application
         Attribs = new AssemblyAttributes();
         State = new SystemState();
 
+        #region [Processor Architecture]
+        // https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
+        SYSTEM_INFO systemInfo = new SYSTEM_INFO();
+        Win32API.GetNativeSystemInfo(out systemInfo);
+        ProcessorCount = systemInfo.dwNumberOfProcessors;
+        var pa = systemInfo.wProcessorArchitecture;
+        Architecture = pa switch
+        {
+            0 => "X86",     // PROCESSOR_ARCHITECTURE_INTEL (32-bit)
+            5 => "ARM",     // PROCESSOR_ARCHITECTURE_ARM (Advanced RISC Machine)
+            6 => "X64",     // PROCESSOR_ARCHITECTURE_IA64 (Intel Itanium-based)
+            9 => "X64",     // PROCESSOR_ARCHITECTURE_AMD64 (64-bit AMD or Intel)
+            12 => "ARM64",  // PROCESSOR_ARCHITECTURE_ARM64 (64-bit Advanced RISC Machine)
+            _ => "UNKNOWN", // PROCESSOR_ARCHITECTURE_UNKNOWN (0xFFFF)
+        };
+        #endregion
+
         this.InitializeComponent();
     }
 
@@ -92,6 +116,22 @@ public partial class App : Application
             App.MainRoot = _window.Content as FrameworkElement;
             App.MainWindow = _window;
             App.WindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(_window);
+
+            #region [Win32 API]
+            //var awip = Win32API.GetWindowLongPtr(App.WindowHandle, -20);
+            //if ((int)awip == Win32API.WS_EX_OVERLAPPEDWINDOW)
+            //    Debug.WriteLine("Window style is WS_EX_OVERLAPPEDWINDOW.");
+            //else if ((int)awip == Win32API.WS_EX_WINDOWEDGE)
+            //    Debug.WriteLine("Window style is WS_EX_WINDOWEDGE.");
+            //else if ((int)awip == Win32API.WS_EX_CLIENTEDGE)
+            //    Debug.WriteLine("Window style is WS_EX_CLIENTEDGE.");
+            //else
+            //    Debug.WriteLine($"Window style is {awip}.");
+
+            // https://learn.microsoft.com/en-us/windows/win32/winmsg/extended-window-styles
+            // Set the window style to tooltip.
+            //Win32API.SetWindowLongPtr(App.WindowHandle, Win32API.GWL_EXSTYLE, Win32API.WS_EX_TOOLWINDOW);
+            #endregion
 
             AppWin = _window.GetAppWindow();
             if (AppWin != null)
@@ -307,6 +347,45 @@ public partial class App : Application
         }
 
         return path;
+    }
+
+    /// <summary>
+    /// Uses interop APIs to obtain the main window's title.
+    /// </summary>
+    public static string GetWindowTitle()
+    {
+        try
+        {
+            if (App.WindowHandle == IntPtr.Zero)
+                return string.Empty;
+
+            int length = Win32API.GetWindowTextLength(App.WindowHandle);
+            StringBuilder sb = new StringBuilder(length + 1);
+            Win32API.GetWindowText(App.WindowHandle, sb, sb.Capacity);
+            return sb.ToString();
+        }
+        catch (Exception)
+        {
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// It's better to use Microsoft.UI.Windowing.DisplayArea, but this is the Win32API method.
+    /// </summary>
+    /// <returns>tuple</returns>
+    public static (int, int) GetScreenDimensions()
+    {
+        try
+        {
+            int sWidth = Win32API.GetSystemMetrics(Win32API.SM_CXSCREEN);
+            int sHeight = Win32API.GetSystemMetrics(Win32API.SM_CYSCREEN);
+            return (sWidth, sHeight);
+        }
+        catch (Exception)
+        {
+            return (-1, -1);
+        }
     }
     #endregion
 }

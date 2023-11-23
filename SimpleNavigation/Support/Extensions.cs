@@ -26,6 +26,9 @@ using System.Threading;
 using Microsoft.UI.Windowing;
 using Microsoft.UI;
 using System.Collections.Specialized;
+using System.Xml.Linq;
+using System.Xml.Serialization;
+using System.Xml;
 
 namespace SimpleNavigation
 {
@@ -40,7 +43,7 @@ namespace SimpleNavigation
             try
             {
                 var element = (FrameworkElement)obj;
-                
+
                 if (element == null)
                     return new Windows.Foundation.Point(200, 200);
 
@@ -67,11 +70,11 @@ namespace SimpleNavigation
                         (IconElement)new FontIcon() { Glyph = imagePath };
         }
 
-		/// <summary>
-		/// string fin = IntToUTF16((int)FluentIcon.MapPin);
-		/// https://stackoverflow.com/questions/71546789/the-u-escape-sequence-in-c-sharp
-		/// </summary>
-		public static string IntToUTF16(int value)
+        /// <summary>
+        /// string fin = IntToUTF16((int)FluentIcon.MapPin);
+        /// https://stackoverflow.com/questions/71546789/the-u-escape-sequence-in-c-sharp
+        /// </summary>
+        public static string IntToUTF16(int value)
         {
             var builder = new StringBuilder();
             builder.Append((char)value);
@@ -90,12 +93,12 @@ namespace SimpleNavigation
                 if (Enum.TryParse(s, ignoreCase: true, out TEnum result))
                 {
                     // Using the Convert class:
-					int intVal = Convert.ToInt32(result);
-                    
-                    // Using an explicit cast:
-					//int intVal = (int)(object)result;
+                    int intVal = Convert.ToInt32(result);
 
-					values.Add(intVal);
+                    // Using an explicit cast:
+                    //int intVal = (int)(object)result;
+
+                    values.Add(intVal);
                 }
             }
             return values.ToArray();
@@ -132,15 +135,21 @@ namespace SimpleNavigation
         /// </example>
         public static TEnum? ToEnum<TEnum>(this string value)
         {
-            if (string.IsNullOrEmpty(value)) 
+            if (string.IsNullOrEmpty(value))
                 return default;
-            
+
             var parsed = Enum.Parse(typeof(TEnum), value, true);
 
             if (parsed == null)
                 return default;
 
             return (TEnum)parsed;
+        }
+
+        public static string NormalizePackagedAppPath(string appPath)
+        {
+            string path = Uri.UnescapeDataString(appPath).Replace("/", "\\");
+            return path;
         }
 
         public static string GenerateTimestamp(string delimiter = "")
@@ -231,33 +240,44 @@ namespace SimpleNavigation
         }
 
         /// <summary>
-        /// XML formatting helper.
+        /// <br>Converts run-on string of dollar values into list of <see cref="decimal"/> values.</br>
+        /// <br>var prices = GetDecimalValues("PLU10.00$5.00210.00446");</br>
         /// </summary>
-        /// <param name="xml">input string</param>
-        /// <returns>formatted string</returns>
-        public static string PrettyXml(this string xml)
+        /// <returns><see cref="List{T}"/></returns>
+        public static List<decimal> GetDecimalValues(string input)
         {
-            try
-            {
-                var stringBuilder = new StringBuilder();
-                var element = System.Xml.Linq.XElement.Parse(xml);
-                var settings = new System.Xml.XmlWriterSettings();
-                settings.OmitXmlDeclaration = true;
-                settings.Indent = true;
-                settings.NewLineOnAttributes = true;
-                // XmlWriter offers a StringBuilder as an output.
-                using (var xmlWriter = System.Xml.XmlWriter.Create(stringBuilder, settings))
-                {
-                    element.Save(xmlWriter);
-                }
+            List<decimal> decimalValues = new List<decimal>();
 
-                return stringBuilder.ToString();
-            }
-            catch (Exception ex)
+            if (string.IsNullOrEmpty(input))
+                return decimalValues;
+
+            string clean = Regex.Replace(input, "[A-Za-z]", "");
+            MatchCollection matches = Regex.Matches(clean, @"\d+\.\d{2}");
+            foreach (Match match in matches)
             {
-                Console.WriteLine($"PrettyXml: {ex.Message}");
-                return string.Empty;
+                if (decimal.TryParse(match.Value, out decimal value))
+                {
+                    decimalValues.Add(value);
+                }
             }
+            return decimalValues;
+        }
+
+        /// <summary>
+        /// Typically refers to the {AppName}.dll pathing.
+        /// </summary>
+        public static string? GetPathFromAssemblyModules()
+        {
+            string? path = string.Empty;
+            var mods = Assembly.GetExecutingAssembly().GetLoadedModules();
+            Debug.WriteLine($"Assembly is comprised of the following modules:");
+            foreach (var mod in mods)
+            {
+                Debug.WriteLine($" • {mod.FullyQualifiedName}");
+                try { path = Path.GetDirectoryName($"{mod.FullyQualifiedName}"); }
+                catch (Exception) { }
+            }
+            return path;
         }
 
         /// <summary>
@@ -1345,8 +1365,8 @@ namespace SimpleNavigation
 
             if (animation is null)
                 throw new ArgumentNullException("Unknown Target");
-            
-            if (Duration is null) 
+
+            if (Duration is null)
                 Duration = TimeSpan.FromSeconds(0.2d); // 200 milliseconds
 
             animation.InsertExpressionKeyFrame(1f, "this.FinalValue");
@@ -2793,9 +2813,9 @@ namespace SimpleNavigation
         {
             var retTask = await Task.WhenAny(task, Task.Delay(timeoutInMilliseconds)).ConfigureAwait(false);
 
-            #pragma warning disable CS8603 // Possible null reference return.
+#pragma warning disable CS8603 // Possible null reference return.
             return retTask is Task<T> ? task.Result : default;
-            #pragma warning restore CS8603 // Possible null reference return.
+#pragma warning restore CS8603 // Possible null reference return.
         }
 
         /// <summary>
@@ -2893,7 +2913,7 @@ namespace SimpleNavigation
             return tcs.Task;
         }
 
-        #pragma warning disable RECS0165 // Asynchronous methods should return a Task instead of void
+#pragma warning disable RECS0165 // Asynchronous methods should return a Task instead of void
         /// <summary>
         /// Attempts to await on the task and catches exception
         /// </summary>
@@ -2901,7 +2921,7 @@ namespace SimpleNavigation
         /// <param name="onException">What to do when method has an exception</param>
         /// <param name="continueOnCapturedContext">If the context should be captured.</param>
         public static async void SafeFireAndForget(this Task task, Action<Exception>? onException = null, bool continueOnCapturedContext = false)
-        #pragma warning restore RECS0165 // Asynchronous methods should return a Task instead of void
+#pragma warning restore RECS0165 // Asynchronous methods should return a Task instead of void
         {
             try
             {
@@ -2917,5 +2937,497 @@ namespace SimpleNavigation
             }
         }
         #endregion
+
+        #region [XML Helpers]
+        /// <summary>
+        /// Extracts the XML tag name and removes all delimiters.
+        /// </summary>
+        public static string RemoveXmlTags(this string input)
+        {
+            // Closing tag.
+            System.Text.RegularExpressions.Match attempt1 = System.Text.RegularExpressions.Regex.Match(input, "<(.*?)/>");
+            if (attempt1.Success)
+                return attempt1.Groups[1].Value.Trim();
+
+            // Opening tag.
+            System.Text.RegularExpressions.Match attempt2 = System.Text.RegularExpressions.Regex.Match(input, "<(.*?)>");
+            if (attempt2.Success)
+                return attempt2.Groups[1].Value.Trim();
+
+            return input;
+        }
+
+        /// <summary>
+        /// Can be helpful with XML payloads that contain too many namespaces.
+        /// </summary>
+        /// <param name="xmlDocument"></param>
+        /// <param name="disableFormatting"></param>
+        /// <returns>sanitized XML</returns>
+        public static string RemoveAllNamespaces(string xmlDocument, bool disableFormatting = true)
+        {
+            try
+            {
+                XElement xmlDocumentWithoutNs = RemoveAllNamespaces(XElement.Parse(xmlDocument));
+                if (disableFormatting)
+                    return xmlDocumentWithoutNs.ToString(SaveOptions.DisableFormatting);
+                else
+                    return xmlDocumentWithoutNs.ToString();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RemoveAllNamespaces: {ex.Message}");
+                return xmlDocument;
+            }
+        }
+        static XElement RemoveAllNamespaces(XElement xmlDocument)
+        {
+            if (!xmlDocument.HasElements)
+            {
+                XElement xElement = new XElement(xmlDocument.Name.LocalName);
+                xElement.Value = xmlDocument.Value;
+
+                foreach (XAttribute attribute in xmlDocument.Attributes())
+                    xElement.Add(attribute);
+
+                return xElement;
+            }
+            return new XElement(xmlDocument.Name.LocalName, xmlDocument.Elements().Select(el => RemoveAllNamespaces(el)));
+        }
+
+        /// <summary>
+        /// <br>Example:</br>
+        /// <br>var inner = ExtractSingleNodeFromXML(xmlResponse, "plu");</br>
+        /// <br>XmlSerializer serializer = new XmlSerializer(typeof(Price));</br>
+        /// <br>using (StringReader reader = new StringReader(inner))</br>
+        /// <br>var result = (Price)serializer.Deserialize(reader);</br>
+        /// </summary>
+        /// <param name="xml">XML data response.</param>
+        /// <param name="name">The inner element node to extract.</param>
+        /// <returns>All elements contained within <paramref name="name"/>, else an empty string.</returns>
+        public static string ExtractSingleElementNode(this string xml, string name)
+        {
+            string result = string.Empty;
+
+            try
+            {
+                XmlDocument doc = new XmlDocument();
+                doc.LoadXml(xml);
+                XmlNode? pluNode = doc.SelectSingleNode($"//{name}");
+                if (pluNode != null)
+                    result = pluNode.OuterXml;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ExtractSingleElementNode: {ex.Message}");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// <br>A recursive node reader.</br>
+        /// <br>while (xmlReader.Read()) {</br>
+        /// <br>if (xmlReader.NodeType == XmlNodeType.Element) { xmlReader.TraverseNode(); }</br>
+        /// <br>}</br>
+        /// </summary>
+        /// <param name="reader"><see cref="XmlReader"/></param>
+        /// <param name="name">current node name (optional)</param>
+        public static void TraverseNode(this XmlReader reader, string name = "")
+        {
+            // If the reader is positioned on an element
+            if (reader.NodeType == XmlNodeType.Element)
+            {
+                Debug.WriteLine($"ElementName...: {reader.Name}");
+                Debug.WriteLine($"ElementDepth..: {reader.Depth}");
+                // If the element has attributes, print them
+                if (reader.HasAttributes)
+                {
+                    Debug.WriteLine("[Attributes]");
+                    while (reader.MoveToNextAttribute())
+                    {
+                        Debug.WriteLine($" • {reader.Name}: {reader.Value}");
+                    }
+                    // Move back to the element node.
+                    reader.MoveToElement();
+                }
+                // If the element is empty, return.
+                if (reader.IsEmptyElement)
+                {
+                    Debug.WriteLine("");
+                    return;
+                }
+            }
+
+            // Read the next node
+            while (reader.Read())
+            {
+                // If the node is an end element, we're done.
+                if (reader.NodeType == XmlNodeType.EndElement)
+                {
+                    return;
+                }
+                // If the node is an element, call ourself (recursive).
+                if (reader.NodeType == XmlNodeType.Element)
+                {
+                    TraverseNode(reader, reader.Name);
+                }
+                // If the node is a text node, show the content.
+                else if (reader.NodeType == XmlNodeType.Text)
+                {
+                    Debug.WriteLine($"{(!string.IsNullOrEmpty(name) ? $"<{name}> " : "")}Text: {reader.Value}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// var dict = configFileXmlData.GetValuesFromXml("add");
+        /// </summary>
+        /// <param name="xml">The raw XML string.</param>
+        /// <param name="element">The element name to look for.</param>
+        /// <returns><see cref="Dictionary{TKey, TValue}"/></returns>
+        public static Dictionary<string, string> GetValuesFromXml(this string xml, string element = "add")
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+
+            try
+            {
+                XElement root = XElement.Parse(xml);
+                foreach (XElement xe in root.Descendants(element))
+                {
+                    // Check for empty elements, e.g. "<add></add>"
+                    if (xe.Attribute("key") != null && xe.Attribute("value") != null)
+                    {
+                        string key = xe.Attribute("key").Value;
+                        string value = xe.Attribute("value").Value;
+                        dict[key] = value;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetValuesFromXml: {ex.Message}");
+            }
+
+            return dict;
+        }
+
+        /// <summary>
+        /// Creates a dictionary using the element name as the key and the node's contents as the values.
+        /// </summary>
+        /// <param name="xml">The XML string to parse.</param>
+        /// <param name="dump">If true, the contents will be output to the console.</param>
+        /// <returns><see cref="Dictionary{string, List{string}}"/></returns>
+        public static Dictionary<string, List<string>> ConvertXmlIntoDictionary(this string xml, bool dump = false)
+        {
+            Dictionary<string, List<string>> dict = new Dictionary<string, List<string>>();
+
+            try
+            {
+                XElement root = XElement.Parse(xml);
+
+                foreach (XElement element in root.DescendantsAndSelf())
+                {
+                    if (!dict.ContainsKey(element.Name.LocalName))
+                        dict[element.Name.LocalName] = new List<string>();
+
+                    if (!string.IsNullOrEmpty(element.Value.Trim()))
+                        dict[element.Name.LocalName].Add(element.Value.Trim());
+
+                    foreach (XAttribute attribute in element.Attributes())
+                    {
+                        if (!dict.ContainsKey(attribute.Name.LocalName))
+                            dict[attribute.Name.LocalName] = new List<string>();
+
+                        dict[attribute.Name.LocalName].Add(attribute.Value);
+                    }
+                }
+
+                if (dump)
+                {
+                    foreach (var pair in dict)
+                    {
+                        Debug.WriteLine($"Key ⇨ {pair.Key}");
+                        Debug.WriteLine($" • {string.Join(", ", pair.Value)}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ConvertXmlIntoDictionary: {ex.Message}");
+            }
+
+            return dict;
+        }
+
+        /// <summary>
+        /// Convert object into XML data using <see cref="XmlSerializer"/>.
+        /// </summary>
+        /// <param name="obj">object to serialize</param>
+        /// <param name="enc">the <see cref="Encoding"/> to use, if null UTF8 is chosen</param>
+        /// <returns>XML string</returns>
+        /// <remarks>
+        /// If the object to serialize involes types other than primitives, e.g. <see cref="Dictionary{TKey, TValue}"/>,
+        /// then the <see cref="XmlSerializer"/> will need to be contructed with the extraTypes.
+        /// </remarks>
+        public static string GetXmlFromObject(object obj, Encoding? enc = null)
+        {
+            if (enc == null)
+                enc = Encoding.UTF8;
+
+            StringWriterWithEncoding sw = new StringWriterWithEncoding(enc);
+            XmlTextWriter? tw = null;
+
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(obj.GetType());
+                tw = new XmlTextWriter(sw);
+                serializer.Serialize(tw, obj);
+            }
+            catch (InvalidOperationException ioex)
+            {
+                throw new Exception("Failed to serialize: " + ioex.Message +
+                                    Environment.NewLine +
+                                    "InnerException: " +
+                                    ioex.InnerException?.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to serialize: " + ex.Message +
+                                    Environment.NewLine +
+                                    "InnerException: " +
+                                    ex.InnerException?.Message);
+            }
+            finally
+            {
+                sw.Close();
+
+                if (tw != null)
+                    tw.Close();
+            }
+
+            return sw.ToString();
+        }
+
+        /// <summary>
+        /// Serializes an object to XML format.
+        /// </summary>
+        /// <param name="xmlobj"></param>
+        /// <returns>XML string</returns>
+        /// <remarks>
+        /// If the object to serialize involes types other than primitives, e.g. <see cref="Dictionary{TKey, TValue}"/>,
+        /// then the <see cref="XmlSerializer"/> will need to be contructed with the extraTypes.
+        /// </remarks>
+        public static string SerializeToXML(object xmlobj)
+        {
+            string rt = string.Empty;
+            try
+            {
+                using (var ms = new MemoryStream())
+                {
+                    using (var tw = new XmlTextWriter(ms, new UTF8Encoding(true)) { Formatting = Formatting.Indented })
+                    {
+                        XmlSerializer serializer = new XmlSerializer(xmlobj.GetType());
+                        serializer.Serialize(tw, xmlobj);
+                        rt = Encoding.UTF8.GetString(ms.ToArray()).Replace("encoding=\"utf-8\"", string.Empty);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to serialize: " + ex.Message +
+                    Environment.NewLine +
+                    "InnerException: " +
+                    ex.InnerException?.Message);
+            }
+
+            return rt;
+        }
+
+        /// <summary>
+        /// Serializes an object to an XElement.
+        /// </summary>
+        /// <typeparam name="T">The type of the object to serialize.</typeparam>
+        /// <param name="xmlobj">The object to serialize.</param>
+        /// <returns>The XElement or null if an error occurs.</returns>
+        /// <remarks>
+        /// If the object to serialize involes types other than primitives, e.g. <see cref="Dictionary{TKey, TValue}"/>,
+        /// then the <see cref="XmlSerializer"/> will need to be contructed with the extraTypes.
+        /// </remarks>
+        public static XElement SerializeToXElement<T>(T xmlobj)
+        {
+            try
+            {
+                using (MemoryStream memoryStream = new MemoryStream())
+                {
+                    using (TextWriter streamWriter = new StreamWriter(memoryStream))
+                    {
+                        XmlSerializer xmlSerializer = new XmlSerializer(typeof(T));
+                        xmlSerializer.Serialize(streamWriter, xmlobj);
+                        return XElement.Parse(Encoding.UTF8.GetString(memoryStream.ToArray()));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to serialize: " + ex.Message +
+                    Environment.NewLine +
+                    "InnerException: " +
+                    ex.InnerException?.Message);
+            }
+        }
+
+        /// <summary>
+        /// Create object from XML string using <see cref="XmlSerializer"/>.
+        /// </summary>
+        /// <param name="xml">xml string data</param>
+        /// <param name="objectType">type of object to serialize</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// If the object to serialize involes types other than primitives, e.g. <see cref="Dictionary{TKey, TValue}"/>,
+        /// then the <see cref="XmlSerializer"/> will need to be contructed with the extraTypes.
+        /// </remarks>
+        public static new Object? GetObjectFromXml(string xml, Type objectType)
+        {
+            Object? obj = null;
+
+            try
+            {
+                using (StringReader strReader = new StringReader(xml))
+                {
+                    XmlSerializer serializer = new XmlSerializer(objectType);
+                    using (var xmlReader = new XmlTextReader(strReader))
+                    {
+                        if (xmlReader != null)
+                        {
+                            xmlReader.Settings.IgnoreComments = true;
+                            xmlReader.Settings.IgnoreWhitespace = true;
+                            xmlReader.Settings.ConformanceLevel = ConformanceLevel.Auto;
+                            xmlReader.WhitespaceHandling = WhitespaceHandling.All;
+                            xmlReader.Namespaces = true; // If namespaces are present in the xml this is very important!
+                            obj = serializer.Deserialize(xmlReader);
+                        }
+                    }
+                }
+            }
+            catch (InvalidOperationException ioex)
+            {
+                throw new Exception("Failed to deserialize: " +
+                                    xml +
+                                    Environment.NewLine +
+                                    ioex.Message +
+                                    Environment.NewLine +
+                                    "InnerException: " + ioex.InnerException?.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to deserialize: " +
+                                    xml +
+                                    Environment.NewLine +
+                                    ex.Message +
+                                    Environment.NewLine +
+                                    "InnerException: " + ex.InnerException?.Message);
+            }
+
+            return obj;
+        }
+
+        /// <summary>
+        /// XML formatting helper.
+        /// </summary>
+        /// <param name="xml">input string</param>
+        /// <returns>formatted string</returns>
+        public static string PrettyXml(this string xml)
+        {
+            try
+            {
+                var stringBuilder = new StringBuilder();
+                var element = System.Xml.Linq.XElement.Parse(xml);
+                var settings = new System.Xml.XmlWriterSettings();
+                settings.OmitXmlDeclaration = true;
+                settings.Indent = true;
+                settings.NewLineOnAttributes = true;
+                // XmlWriter offers a StringBuilder as an output.
+                using (var xmlWriter = System.Xml.XmlWriter.Create(stringBuilder, settings))
+                {
+                    element.Save(xmlWriter);
+                }
+
+                return stringBuilder.ToString();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"PrettyXml: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+
+        /// <summary>
+        /// XML formatting helper.
+        /// </summary>
+        /// <param name="xml">input string</param>
+        /// <returns>formatted string</returns>
+        public static string PrintXML(string xml)
+        {
+            Encoding enc = Encoding.ASCII;
+            if (xml.StartsWith("<?xml version=\"1.0\" encoding=\"utf-8\""))
+                enc = Encoding.UTF8;
+
+            string result = "";
+            MemoryStream mStream = new MemoryStream();
+            XmlTextWriter writer = new XmlTextWriter(mStream, enc);
+            try
+            {
+                XmlDocument document = new XmlDocument();
+                // Load the XmlDocument with the XML.
+                document.LoadXml(xml);
+                writer.Formatting = Formatting.Indented;
+                writer.Indentation = 3;
+                // Write the XML into a formatting XmlTextWriter
+                document.WriteContentTo(writer);
+                writer.Flush();
+                mStream.Flush();
+                // Have to rewind the MemoryStream in order to read its contents.
+                mStream.Position = 0;
+                // Read MemoryStream contents into a StreamReader.
+                StreamReader sReader = new StreamReader(mStream);
+                // Extract the text from the StreamReader.
+                string formattedXml = sReader.ReadToEnd();
+                result = formattedXml;
+            }
+            catch (XmlException ex)
+            {
+                Debug.WriteLine($"PrintXml(ERROR): {ex.Message}");
+            }
+            finally
+            {
+                mStream.Close();
+                writer.Close();
+            }
+
+            return result;
+        }
+        #endregion [XML Helpers]
+    }
+
+    /// <summary>
+    /// This can also be achieved by passing <see cref="UTF8Encoding"/> to a <see cref="XmlTextWriter"/>.
+    /// </summary>
+    class StringWriterWithEncoding : StringWriter
+    {
+        private readonly Encoding encoding;
+
+        public StringWriterWithEncoding(Encoding encoding) : base()
+        {
+            this.encoding = encoding;
+        }
+
+        public override Encoding Encoding
+        {
+            get
+            {
+                return this.encoding;
+            }
+        }
     }
 }

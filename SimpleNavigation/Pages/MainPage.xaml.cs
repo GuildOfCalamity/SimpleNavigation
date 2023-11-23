@@ -163,6 +163,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         SettingsPage.PostMessageEvent += MainPage_PostMessageEvent;
         TestPage.PostMessageEvent += MainPage_PostMessageEvent;
         AnimationPage.PostMessageEvent += MainPage_PostMessageEvent;
+        WindowMessagesPage.PostMessageEvent += MainPage_PostMessageEvent;
         #endregion
 
         #region [Superfluous]

@@ -10,6 +10,15 @@
     NavigationCacheMode="Enabled"
     mc:Ignorable="d">
 
+    <Page.Resources>
+        <local:XamlLists x:Key="SampleArrayListForControlsWithItemsSource">
+            <x:String>Thing1</x:String>
+            <x:String>Thing2</x:String>
+            <x:String>Thing3</x:String>
+            <x:String>Thing4</x:String>
+        </local:XamlLists>
+    </Page.Resources>
+
     <Grid
         HorizontalAlignment="Stretch"
         VerticalAlignment="Stretch"
@@ -19,6 +28,9 @@
             Grid.Row="0"
             Orientation="Horizontal"
             Spacing="24">
+            <!-- [Test of XamlLists]
+            <ComboBox ItemsSource="{StaticResource SampleArrayListForControlsWithItemsSource}" SelectedIndex="0" />
+            -->
             <CheckBox
                 x:Name="cbCollisions"
                 Content="Collision detection"

@@ -489,6 +489,12 @@
                     GroupName="Nav"
                     Style="{StaticResource NavigationRadioButtonStyle}"
                     Tag="SimpleNavigation.BluetoothPage" />
+                <RadioButton
+                    Click="RadioButton_Click"
+                    Content="WinMsg Page"
+                    GroupName="Nav"
+                    Style="{StaticResource NavigationRadioButtonStyle}"
+                    Tag="SimpleNavigation.WindowMessagesPage" />
             </StackPanel>
         </ScrollViewer>
 

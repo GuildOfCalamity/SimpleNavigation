@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="SimpleNavigation.WindowMessagesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:SimpleNavigation"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    NavigationCacheMode="Enabled"
+    mc:Ignorable="d">
+
+    <Grid Margin="10">
+        <Grid.Resources>
+            <ThemeShadow x:Name="SharedShadow" />
+        </Grid.Resources>
+        <ScrollViewer>
+            <StackPanel
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="20">
+                    <TextBlock
+                        x:Name="landing"
+                        HorizontalAlignment="Center"
+                        FontSize="20" />
+                    <!--
+                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                        <Run
+                            FontSize="14"
+                            FontWeight="Medium"
+                            Foreground="{ThemeResource TextForeground1}"
+                            Text="Selected Index:" />
+                        <Run
+                            FontSize="14"
+                            FontWeight="Medium"
+                            Foreground="{ThemeResource GlowBrush}"
+                            Text="{x:Bind SelectedIdx, Mode=OneWay}" />
+
+                    </TextBlock>
+                    -->
+                </StackPanel>
+
+                <!--  HEADER  -->
+                <Grid
+                    ColumnDefinitions="3*,3*,2*"
+                    ColumnSpacing="6"
+                    ToolTipService.ToolTip="Header">
+                    <TextBlock
+                        Grid.Column="0"
+                        MinWidth="200"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        FontWeight="Bold"
+                        Foreground="{ThemeResource TextForeground1}"
+                        HorizontalTextAlignment="Center"
+                        Text="Date &amp; Time" />
+                    <TextBlock
+                        Grid.Column="1"
+                        MinWidth="200"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        FontWeight="Bold"
+                        Foreground="{ThemeResource TextForeground2}"
+                        HorizontalTextAlignment="Right"
+                        Text="WinMsg" />
+                    <TextBlock
+                        Grid.Column="2"
+                        MinWidth="120"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        FontWeight="Bold"
+                        Foreground="{ThemeResource TextForeground5}"
+                        HorizontalTextAlignment="Right"
+                        Text="Hex Value" />
+                </Grid>
+
+                <!--  CONTENT  -->
+                <ListView
+                    x:Name="lvMessage"
+                    ItemsSource="{x:Bind WindowMessages, Mode=OneWay}"
+                    SelectedIndex="{x:Bind SelectedIdx, Mode=TwoWay}">
+                    <ListView.Transitions>
+                        <AddDeleteThemeTransition />
+                    </ListView.Transitions>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="local:MessageEventArgs">
+                            <StackPanel
+                                Padding="8,4"
+                                CornerRadius="6"
+                                Shadow="{StaticResource SharedShadow}"
+                                Translation="0,0,32">
+                                <Grid
+                                    ColumnDefinitions="3*,3*,2*"
+                                    ColumnSpacing="6"
+                                    ToolTipService.ToolTip="{x:Bind Code}">
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        MinWidth="200"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top"
+                                        Foreground="{ThemeResource TextForeground1}"
+                                        HorizontalTextAlignment="Left"
+                                        Text="{x:Bind Time, Mode=OneWay}" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        MinWidth="200"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top"
+                                        Foreground="{ThemeResource TextForeground2}"
+                                        HorizontalTextAlignment="Right"
+                                        Text="{x:Bind Code, Mode=OneWay}" />
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        MinWidth="120"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top"
+                                        Foreground="{ThemeResource TextForeground5}"
+                                        HorizontalTextAlignment="Right"
+                                        Text="{x:Bind Value, Mode=OneWay}" />
+                                </Grid>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
