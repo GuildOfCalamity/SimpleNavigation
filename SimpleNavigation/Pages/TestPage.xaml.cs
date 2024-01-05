@@ -93,6 +93,8 @@ public sealed partial class TestPage : Page, INotifyPropertyChanged
                 Content = $"OnNavigatedTo ⇨ {sys.Title}",
                 Severity = InfoBarSeverity.Informational,
             });
+            // Test the event bus.
+            sys.EventBus?.Publish("EventBusMessage", $"{DateTime.Now.ToLongTimeString()}");
         }
         else
         {

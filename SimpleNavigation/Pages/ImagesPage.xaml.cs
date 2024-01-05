@@ -45,13 +45,14 @@ public sealed partial class ImagesPage : Page
     {
         if (e.Parameter != null && e.Parameter is SystemState sys)
         {
-            // ⇦ ⇨ ⇧ ⇩  🡐 🡒 🡑 🡓  🡄 🡆 🡅 🡇  http://xahlee.info/comp/unicode_arrows.html
             Debug.WriteLine($"You sent '{sys.Title}'");
             PostMessageEvent?.Invoke(this, new Message
             {
                 Content = $"OnNavigatedTo ⇨ {sys.Title}",
                 Severity = InfoBarSeverity.Informational,
             });
+            // Test the event bus.
+            sys.EventBus?.Publish("EventBusMessage", $"{DateTime.Now.ToLongTimeString()}");
         }
         else
         {
@@ -75,16 +76,6 @@ public sealed partial class ImagesPage : Page
         {
             Images.Add(await LoadImageInfoAsync(file));
         }
-    }
-
-    async Task<StorageFolder> GetKnownPicturesPath()
-    {
-        return await KnownFolders.GetFolderAsync(KnownFolderId.PicturesLibrary);
-    }
-
-    async Task<StorageFolder> GetKnownDocumentsPath()
-    {
-        return await KnownFolders.GetFolderAsync(KnownFolderId.DocumentsLibrary);
     }
 
     public async static Task<ImageFileProps> LoadImageInfoAsync(StorageFile file)

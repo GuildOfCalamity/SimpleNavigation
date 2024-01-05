@@ -12,4 +12,5 @@ public class SystemState
     public Type? PageType { get; set; }
     public DateTime? LastUpdate { get; set; } = DateTime.Now;
     public ElementTheme? CurrentTheme { get; set; }
+    public EventBus? EventBus { get; set; }
 }

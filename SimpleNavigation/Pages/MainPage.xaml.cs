@@ -47,12 +47,13 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
     }
 
     ObservableCollection<Message> _msgs = new();
-	#endregion
+    EventBus _eventBus = new();
+    #endregion
 
     /// <summary>
     /// A keyboard event that another page/model can subscribe to.
     /// </summary>
-	public static event EventHandler<KeyboardInput>? MainPageKeyboardEvent;
+    public static event EventHandler<KeyboardInput>? MainPageKeyboardEvent;
 
 	public MainPage()
     {
@@ -166,6 +167,9 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         WindowMessagesPage.PostMessageEvent += MainPage_PostMessageEvent;
         #endregion
 
+        if (!_eventBus.IsSubscribed("EventBusMessage"))
+            _eventBus.Subscribe("EventBusMessage", EventBusHandlerMethod);
+
         #region [Superfluous]
         var test = typeof(RelayCommand).GetConstructors().FirstOrDefault(c => c.GetParameters().Length != 0);
         if (test != null)
@@ -175,6 +179,22 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
         if (mod != null)
             Debug.WriteLine($"I can't live without this! 🡒 '{mod.FullyQualifiedName}'");
         #endregion
+    }
+
+    /// <summary>
+    /// For <see cref="EventBus"/> model demonstration.
+    /// </summary>
+    void EventBusHandlerMethod(object? sender, ObjectEventArgs e)
+    {
+        if (e.Payload == null)
+            Debug.WriteLine($"Received null object event!");
+        else if (e.Payload?.GetType() == typeof(System.String))
+        {
+            Debug.WriteLine($"Received EventBus Payload: {e.Payload}");
+            ShowEvent($"{e.Payload}");
+        }
+        else
+            Debug.WriteLine($"Received EventBus Payload of type: {e.Payload?.GetType()}");
     }
 
     void MainPage_PostMessageEvent(object? sender, Message msg) => ShowMessage(msg.Content, msg.Severity);
@@ -204,6 +224,11 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             // If using the ItemsRepeater in the InfoBar.
             _msgs.Add(new Message { Content = $"{message}", Severity = severity });
         });
+    }
+
+    void ShowEvent(string message)
+    {
+        tbEventBus.DispatcherQueue?.TryEnqueue(() => { tbEventBus.Text = $"{message}"; });
     }
 
     /// <summary>
@@ -250,6 +275,7 @@ public sealed partial class MainPage : Page, INotifyPropertyChanged
             App.State.PageType = Type.GetType($"{((RadioButton)sender).Tag}");
             App.State.Title = pageTitle.Text;
             App.State.CurrentTheme = MainFrame.ActualTheme;
+            App.State.EventBus = _eventBus;
 
             // Navigate to the page with optional params.
             MainFrame.Navigate(App.State.PageType, App.State);

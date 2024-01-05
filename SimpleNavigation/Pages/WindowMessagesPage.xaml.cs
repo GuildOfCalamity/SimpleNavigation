@@ -53,6 +53,7 @@ public sealed partial class WindowMessagesPage : Page, INotifyPropertyChanged
 
         this.InitializeComponent();
         this.Loaded += WindowMessagesPage_Loaded;
+        this.Unloaded += WindowMessagesPage_Unloaded;
     }
 
     /// <summary>
@@ -69,6 +70,8 @@ public sealed partial class WindowMessagesPage : Page, INotifyPropertyChanged
                 Content = $"OnNavigatedTo ⇨ {sys.Title}",
                 Severity = InfoBarSeverity.Informational,
             });
+            // Test the event bus.
+            sys.EventBus?.Publish("EventBusMessage", $"{DateTime.Now.ToLongTimeString()}");
         }
         else
         {
@@ -83,7 +86,7 @@ public sealed partial class WindowMessagesPage : Page, INotifyPropertyChanged
         if (WML == null && App.WindowHandle != IntPtr.Zero)
         {
             timer = new DispatcherTimer();
-            timer.Interval = TimeSpan.FromMilliseconds(80);
+            timer.Interval = TimeSpan.FromMilliseconds(50);
             timer.Tick += QueueTimer_Tick;
             timer.Start();
 
@@ -91,6 +94,18 @@ public sealed partial class WindowMessagesPage : Page, INotifyPropertyChanged
             WML = new WindowsMessageLogger();
             WML.WndProcMsgReceived += WndProcMsgReceived;
             WML.StartLogging(App.WindowHandle);
+        }
+        else if (WML != null)
+        {
+            timer?.Start();
+        }
+    }
+
+    void WindowMessagesPage_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (WML != null)
+        {
+            timer?.Stop();
         }
     }
 

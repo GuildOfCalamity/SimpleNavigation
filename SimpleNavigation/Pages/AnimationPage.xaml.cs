@@ -27,7 +27,7 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
     #region [Props]
 	double xSpeed = 4;
 	double ySpeed = 4;
-	const int maxObjects = 28;
+	const int maxObjects = 20;
 	const double gravityFactor = 0.5;
     const double maxGravitySpeed = 26;
 	DispatcherTimer? timer = null;
@@ -162,6 +162,8 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
                 Content = $"OnNavigatedTo ⇨ {sys.Title}",
                 Severity = InfoBarSeverity.Informational,
             });
+            // Test the event bus.
+            sys.EventBus?.Publish("EventBusMessage", $"{DateTime.Now.ToLongTimeString()}");
         }
         else
         {
@@ -249,7 +251,8 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 
         if (use60FPS)
 		{
-			CompositionTarget.Rendering += CompositionTarget_Rendering;
+            // Use 60 frames per second.
+            Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += CompositionTarget_Rendering;
 		}
 		else
 		{
@@ -293,8 +296,8 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 	/// above is generally best for a smooth user experience.
     /// If you need a higher update rate or a more accurate timer, you might consider using alternative 
     /// timer mechanisms. One such alternative is the <see cref="CompositionTarget.Rendering"/> event, 
-    /// which is triggered each time a new frame is rendered.This event is tightly synchronized with the 
-    /// display's refresh rate, providing a more accurate timer for animations.
+    /// which is triggered each time a new frame is rendered. This event is tightly synchronized with 
+	/// the display's refresh rate, providing a more accurate timer for animations.
     /// </summary>
     void CompositionTarget_Rendering(object? sender, object e)
 	{
@@ -348,8 +351,8 @@ public sealed partial class AnimationPage : Page, INotifyPropertyChanged
 	/// above is generally best for a smooth user experience.
     /// If you need a higher update rate or a more accurate timer, you might consider using alternative 
     /// timer mechanisms. One such alternative is the <see cref="CompositionTarget.Rendering"/> event, 
-    /// which is triggered each time a new frame is rendered.This event is tightly synchronized with the 
-    /// display's refresh rate, providing a more accurate timer for animations.
+    /// which is triggered each time a new frame is rendered. This event is tightly synchronized with 
+	/// the display's refresh rate, providing a more accurate timer for animations.
     /// </summary>
     void AnimationTimer_Tick(object? sender, object e)
 	{

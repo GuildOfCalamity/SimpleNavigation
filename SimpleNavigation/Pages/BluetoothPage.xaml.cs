@@ -91,8 +91,10 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
 				Content = $"OnNavigatedTo ⇨ {sys.Title}",
 				Severity = InfoBarSeverity.Informational,
 			});
-		}
-		else
+            // Test the event bus.
+            sys.EventBus?.Publish("EventBusMessage", $"{DateTime.Now.ToLongTimeString()}");
+        }
+        else
 		{
 			Debug.WriteLine($"Parameter is not of type '{nameof(SystemState)}'");
 		}
@@ -339,7 +341,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             }
             #endregion
         }
-        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions (e.g. from an external C++/DLL)
+        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions
         {
             String? s = rwe.WrappedException as String;
             if (s != null)
@@ -367,7 +369,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             DeviceInformationCollection? devices = await DeviceInformation.FindAllAsync(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
             return devices;
         }
-        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions (e.g. from an external C++/DLL)
+        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions
         {
             String? s = rwe.WrappedException as String;
             if (s != null)
@@ -394,7 +396,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             DeviceInformationCollection? devices = await DeviceInformation.FindAllAsync(selector);
             return devices;
         }
-        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions (e.g. from an external C++/DLL)
+        catch (RuntimeWrappedException rwe) // catch any non-CLS exceptions
         {
             String? s = rwe.WrappedException as String;
             if (s != null)
@@ -407,6 +409,7 @@ public sealed partial class BluetoothPage : Page, INotifyPropertyChanged
             return null; 
         }
     }
+
 
     #region [Device discovery from UWP using a Watcher]
     private ObservableCollection<BluetoothLEDeviceDisplay> KnownDevices = new ObservableCollection<BluetoothLEDeviceDisplay>();
@@ -637,10 +640,7 @@ public class BluetoothLEDeviceDisplay : INotifyPropertyChanged
     public BluetoothLEDeviceDisplay(DeviceInformation deviceInfoIn)
     {
         DeviceInformation = deviceInfoIn;
-        UpdateGlyphBitmapImage().SafeFireAndForget(ex =>
-        {
-            Debug.WriteLine($"UpdateGlyphBitmapImage: {ex.Message}");
-        });
+        UpdateGlyphBitmapImage();
     }
 
     public void Update(DeviceInformationUpdate deviceInfoUpdate)
@@ -655,13 +655,10 @@ public class BluetoothLEDeviceDisplay : INotifyPropertyChanged
         OnPropertyChanged("Properties");
         OnPropertyChanged("IsConnectable");
 
-        UpdateGlyphBitmapImage().SafeFireAndForget(ex => 
-        {
-            Debug.WriteLine($"UpdateGlyphBitmapImage: {ex.Message}");
-        });
+        UpdateGlyphBitmapImage();
     }
 
-    private async Task UpdateGlyphBitmapImage()
+    private async void UpdateGlyphBitmapImage()
     {
         DeviceThumbnail deviceThumbnail = await DeviceInformation.GetGlyphThumbnailAsync();
         var glyphBitmapImage = new BitmapImage();

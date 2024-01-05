@@ -71,6 +71,8 @@ public sealed partial class NextPage : Page
                 Content = $"OnNavigatedTo ⇨ {sys.Title}",
                 Severity = InfoBarSeverity.Informational,
             });
+            // Test the event bus.
+            sys.EventBus?.Publish("EventBusMessage", $"{DateTime.Now.ToLongTimeString()}");
         }
         else
         {
